@@ -13,17 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with gsshvnc.  If not, see <http://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.1)
 project(gsshvnc)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK_VNC REQUIRED gvnc-1.0 gtk-vnc-2.0)
+pkg_check_modules(GVNC REQUIRED gvnc-1.0)
+pkg_check_modules(GTK_VNC REQUIRED gtk-vnc-2.0)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 
-include_directories(${GTK_VNC_INCLUDE_DIRS})
+if(NOT GTK_VNC_VERSION VERSION_LESS "0.7.0")
+    add_definitions(-DGTK_VNC_HAVE_SMOOTH_SCALING)
+endif()
+
+include_directories(${GTK_VNC_INCLUDE_DIRS} ${GVNC_INCLUDE_DIRS})
 include_directories(${GTKMM_INCLUDE_DIRS})
 
 set(gsshvnc_HEADERS
@@ -38,4 +43,5 @@ set(gsshvnc_SOURCES
 )
 
 add_executable(gsshvnc ${gsshvnc_HEADERS} ${gsshvnc_SOURCES})
-target_link_libraries(gsshvnc ${GTK_VNC_LIBRARIES} ${GTKMM_LIBRARIES})
+target_link_libraries(gsshvnc ${GTK_VNC_LIBRARIES} ${GVNC_LIBRARIES})
+target_link_libraries(gsshvnc ${GTKMM_LIBRARIES})

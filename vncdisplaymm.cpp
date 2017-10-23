@@ -75,12 +75,17 @@ Vnc::DisplayWindow::DisplayWindow()
 
     m_fullscreen = Gtk::manage(new Gtk::CheckMenuItem("_Full Screen", true));
     m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
-    m_smoothing = Gtk::manage(new Gtk::CheckMenuItem("S_mooth Scaling", true));
-    m_smoothing->set_active(true);
 
     submenu->append(*m_fullscreen);
     submenu->append(*m_scaling);
+
+#ifdef GTK_VNC_HAVE_SMOOTH_SCALING
+    m_smoothing = Gtk::manage(new Gtk::CheckMenuItem("S_mooth Scaling", true));
+    m_smoothing->set_active(true);
     submenu->append(*m_smoothing);
+#else
+    m_smoothing = nullptr;
+#endif
 
     view->set_submenu(*submenu);
 
@@ -155,9 +160,11 @@ Vnc::DisplayWindow::DisplayWindow()
     m_scaling->signal_toggled().connect([this]() {
         on_set_scaling(m_scaling->get_active());
     });
+#ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     m_smoothing->signal_toggled().connect([this]() {
         on_set_smoothing(m_smoothing->get_active());
     });
+#endif
 }
 
 bool Vnc::DisplayWindow::open_fd(int fd)
@@ -329,18 +336,29 @@ bool Vnc::DisplayWindow::get_force_size()
 
 void Vnc::DisplayWindow::on_set_smoothing(bool enable)
 {
+#ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     vnc_display_set_smoothing(get_vnc(), enable);
+#else
+    (void)enable;
+#endif
 }
 
 void Vnc::DisplayWindow::set_smoothing(bool enable)
 {
     on_set_smoothing(enable);
+#ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     m_smoothing->set_active(enable);
+#endif
 }
 
 bool Vnc::DisplayWindow::get_smoothing()
 {
+#ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     return static_cast<bool>(vnc_display_get_smoothing(get_vnc()));
+#else
+    /* Always enabled for gtk-vnc < 0.7.0 */
+    return true;
+#endif
 }
 
 void Vnc::DisplayWindow::set_shared_flag(bool enable)
@@ -386,7 +404,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_connected =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_connected()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_connected()
 {
     return {m_vnc, &VncDisplay_signal_vnc_connected};
 }
@@ -398,7 +416,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_initialized =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_initialized()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_initialized()
 {
     return {m_vnc, &VncDisplay_signal_vnc_initialized};
 }
@@ -410,7 +428,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_disconnected =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_disconnected()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_disconnected()
 {
     return {m_vnc, &VncDisplay_signal_vnc_disconnected};
 }
@@ -438,7 +456,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_error =
     (GCallback) &VncDisplay_signal_vnc_error_callback
 };
 
-Glib::SignalProxy<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_error()
+Glib::SignalProxy1<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_error()
 {
     return {m_vnc, &VncDisplay_signal_vnc_error};
 }
@@ -474,7 +492,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_auth_credential =
     (GCallback) &VncDisplay_signal_vnc_auth_credential_callback
 };
 
-Glib::SignalProxy<void, const std::vector<VncDisplayCredential> &>
+Glib::SignalProxy1<void, const std::vector<VncDisplayCredential> &>
 Vnc::DisplayWindow::signal_vnc_auth_credential()
 {
     return {m_vnc, &VncDisplay_signal_vnc_auth_credential};
@@ -487,7 +505,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_pointer_grab =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_pointer_grab()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_pointer_grab()
 {
     return {m_vnc, &VncDisplay_signal_vnc_pointer_grab};
 }
@@ -499,7 +517,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_pointer_ungrab =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_pointer_ungrab()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_pointer_ungrab()
 {
     return {m_vnc, &VncDisplay_signal_vnc_pointer_ungrab};
 }
@@ -511,7 +529,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_keyboard_grab =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_keyboard_grab()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_keyboard_grab()
 {
     return {m_vnc, &VncDisplay_signal_vnc_keyboard_grab};
 }
@@ -523,7 +541,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_keyboard_ungrab =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_keyboard_ungrab()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_keyboard_ungrab()
 {
     return {m_vnc, &VncDisplay_signal_vnc_keyboard_ungrab};
 }
@@ -551,7 +569,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_desktop_resize =
     (GCallback) &VncDisplay_signal_vnc_desktop_resize_callback
 };
 
-Glib::SignalProxy<void, gint, gint> Vnc::DisplayWindow::signal_vnc_desktop_resize()
+Glib::SignalProxy2<void, gint, gint> Vnc::DisplayWindow::signal_vnc_desktop_resize()
 {
     return {m_vnc, &VncDisplay_signal_vnc_desktop_resize};
 }
@@ -574,12 +592,12 @@ static void VncDisplay_signal_vnc_auth_failure_callback(GtkWidget *self,
 
 static const Glib::SignalProxyInfo VncDisplay_signal_vnc_auth_failure =
 {
-    "vnc-error",
+    "vnc-auth-failure",
     (GCallback) &VncDisplay_signal_vnc_auth_failure_callback,
     (GCallback) &VncDisplay_signal_vnc_auth_failure_callback
 };
 
-Glib::SignalProxy<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_auth_failure()
+Glib::SignalProxy1<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_auth_failure()
 {
     return {m_vnc, &VncDisplay_signal_vnc_auth_failure};
 }
@@ -607,7 +625,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_auth_unsupported =
     (GCallback) &VncDisplay_signal_vnc_auth_unsupported_callback
 };
 
-Glib::SignalProxy<void, guint> Vnc::DisplayWindow::signal_vnc_auth_unsupported()
+Glib::SignalProxy1<void, guint> Vnc::DisplayWindow::signal_vnc_auth_unsupported()
 {
     return {m_vnc, &VncDisplay_signal_vnc_auth_unsupported};
 }
@@ -635,7 +653,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_server_cut_text =
     (GCallback) &VncDisplay_signal_vnc_server_cut_text_callback
 };
 
-Glib::SignalProxy<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_server_cut_text()
+Glib::SignalProxy1<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_server_cut_text()
 {
     return {m_vnc, &VncDisplay_signal_vnc_server_cut_text};
 }
@@ -647,7 +665,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_bell =
     (GCallback) &Glib::SignalProxyNormal::slot0_void_callback
 };
 
-Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_bell()
+Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_bell()
 {
     return {m_vnc, &VncDisplay_signal_vnc_bell};
 }

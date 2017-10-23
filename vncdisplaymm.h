@@ -84,6 +84,7 @@ public:
     void set_force_size(bool enable=true);
     bool get_force_size();
 
+    /* Not supported on gtk-vnc < 0.7.0 */
     void set_smoothing(bool enable=true);
     bool get_smoothing();
 
@@ -99,21 +100,22 @@ public:
 
     static Glib::OptionGroup &option_group();
 
-    Glib::SignalProxy<void> signal_vnc_connected();
-    Glib::SignalProxy<void> signal_vnc_initialized();
-    Glib::SignalProxy<void> signal_vnc_disconnected();
-    Glib::SignalProxy<void, const Glib::ustring &> signal_vnc_error();
-    Glib::SignalProxy<void, const std::vector<VncDisplayCredential> &>
+    Glib::SignalProxy0<void> signal_vnc_connected();
+    Glib::SignalProxy0<void> signal_vnc_initialized();
+    Glib::SignalProxy0<void> signal_vnc_disconnected();
+    /* NOTE: signal_vnc_error not emitted on gtk-vnc < 0.6.0 */
+    Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_error();
+    Glib::SignalProxy1<void, const std::vector<VncDisplayCredential> &>
         signal_vnc_auth_credential();
-    Glib::SignalProxy<void> signal_vnc_pointer_grab();
-    Glib::SignalProxy<void> signal_vnc_pointer_ungrab();
-    Glib::SignalProxy<void> signal_vnc_keyboard_grab();
-    Glib::SignalProxy<void> signal_vnc_keyboard_ungrab();
-    Glib::SignalProxy<void, gint, gint> signal_vnc_desktop_resize();
-    Glib::SignalProxy<void, const Glib::ustring &> signal_vnc_auth_failure();
-    Glib::SignalProxy<void, guint> signal_vnc_auth_unsupported();
-    Glib::SignalProxy<void, const Glib::ustring &> signal_vnc_server_cut_text();
-    Glib::SignalProxy<void> signal_vnc_bell();
+    Glib::SignalProxy0<void> signal_vnc_pointer_grab();
+    Glib::SignalProxy0<void> signal_vnc_pointer_ungrab();
+    Glib::SignalProxy0<void> signal_vnc_keyboard_grab();
+    Glib::SignalProxy0<void> signal_vnc_keyboard_ungrab();
+    Glib::SignalProxy2<void, gint, gint> signal_vnc_desktop_resize();
+    Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_auth_failure();
+    Glib::SignalProxy1<void, guint> signal_vnc_auth_unsupported();
+    Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_server_cut_text();
+    Glib::SignalProxy0<void> signal_vnc_bell();
 
     void set_grab_keyboard(bool enable=true);
     bool get_grab_keyboard();
