@@ -98,7 +98,6 @@ public:
     bool is_pointer_absolute();
 
     static Glib::OptionGroup &option_group();
-    //static std::vector<Glib::OptionEntry> option_entries();
 
     Glib::SignalProxy<void> signal_vnc_connected();
     Glib::SignalProxy<void> signal_vnc_initialized();
@@ -116,6 +115,9 @@ public:
     Glib::SignalProxy<void, const Glib::ustring &> signal_vnc_server_cut_text();
     Glib::SignalProxy<void> signal_vnc_bell();
 
+    void set_grab_keyboard(bool enable=true);
+    bool get_grab_keyboard();
+
 private:
     Gtk::Widget *m_vnc;
     VncDisplay *get_vnc();
@@ -126,11 +128,12 @@ private:
     Glib::ustring m_menu_bar_accel;
     std::vector<Glib::RefPtr<Gtk::AccelGroup>> m_accel_groups;
 
+    Gtk::CheckMenuItem *m_capture_keyboard;
     Gtk::CheckMenuItem *m_fullscreen;
     Gtk::CheckMenuItem *m_scaling;
     Gtk::CheckMenuItem *m_smoothing;
 
-    bool vnc_screenshot(GdkEventKey *ev);
+    void vnc_screenshot();
     void vnc_initialized();
     void update_title(bool grabbed);
     void vnc_credential(const std::vector<VncDisplayCredential> &credList);
@@ -138,7 +141,6 @@ private:
     void on_set_smoothing(bool enable=true);
     void disable_modifiers();
     void enable_modifiers();
-    void on_set_grab_keys();
 };
 
 }

@@ -62,24 +62,6 @@ private:
     bool m_owned;
 };
 
-class GrabSequenceDialog : public Gtk::Dialog
-{
-public:
-    explicit GrabSequenceDialog(Gtk::Window &parent);
-
-    GrabSequence get_sequence();
-
-private:
-    std::vector<guint> m_keysyms;
-    size_t m_curkeys;
-    bool m_set;
-    Gtk::Label *m_label;
-
-    void update_keysyms();
-    bool on_key_press(GdkEventKey *ev);
-    bool on_key_release(GdkEventKey *ev);
-};
-
 }
 
 #endif

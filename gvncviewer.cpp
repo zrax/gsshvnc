@@ -35,9 +35,9 @@ struct _GVncViewerOptions : public Glib::OptionGroup
 
 int main(int argc, char *argv[])
 {
-    auto name = Glib::ustring::compose("- Simple VNC Client on Gtk-VNC %1",
+    auto name = Glib::ustring::compose("- Simple SSH/VNC Client on Gtk-VNC %1",
                                        vnc_util_get_version_string());
-    static const char help_msg[] = "Run 'gvncviewer --help' to see a full list of available command line options";
+    static const char help_msg[] = "Run 'gsshvnc --help' to see a full list of available command line options";
 
     /* Setup command line options */
     Glib::OptionContext context(name);
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (mainOptions.m_args.size() != 1) {
-        std::cerr << "Usage: gvncviewer [hostname][:display]\n"
+        std::cerr << "Usage: gsshvnc [hostname][:display]\n"
                   << help_msg << std::endl;
         return 1;
     }
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
 
     if (!vnc.is_composited())
         vnc.set_scaling(true);
+    vnc.set_grab_keyboard(true);
 
     vnc.signal_delete_event().connect([](GdkEventAny *) -> bool {
         Gtk::Main::quit();

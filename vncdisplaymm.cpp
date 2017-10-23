@@ -21,6 +21,7 @@
 #include <gtkmm/box.h>
 #include <gtkmm/table.h>
 #include <gtkmm/entry.h>
+#include <gtkmm/separatormenuitem.h>
 #include <gtkmm/settings.h>
 #include <iostream>
 
@@ -43,34 +44,29 @@ Vnc::DisplayWindow::DisplayWindow()
 
     set_resizable(true);
 
-    auto sendkey = Gtk::manage(new Gtk::MenuItem("_Send Key", true));
-    menubar->append(*sendkey);
+    auto remote = Gtk::manage(new Gtk::MenuItem("_Remote", true));
+    menubar->append(*remote);
 
     auto submenu = Gtk::manage(new Gtk::Menu);
 
-    auto caf1 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_1", true));
-    auto caf2 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_2", true));
-    auto caf3 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_3", true));
-    auto caf4 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_4", true));
-    auto caf5 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_5", true));
-    auto caf6 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_6", true));
-    auto caf7 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_7", true));
-    auto caf8 = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+F_8", true));
-    auto cad = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+_Del", true));
-    auto cab = Gtk::manage(new Gtk::MenuItem("Ctrl+Alt+_Backspace", true));
+    auto connect = Gtk::manage(new Gtk::MenuItem("_Connect", true));
+    auto disconnect = Gtk::manage(new Gtk::MenuItem("_Disconnect", true));
+    m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture _Keyboard", true));
+    auto send_cad = Gtk::manage(new Gtk::MenuItem("Send Ctrl+Alt+_Del", true));
+    auto screenshot = Gtk::manage(new Gtk::MenuItem("Take _Screenshot", true));
+    auto appquit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
 
-    submenu->append(*caf1);
-    submenu->append(*caf2);
-    submenu->append(*caf3);
-    submenu->append(*caf4);
-    submenu->append(*caf5);
-    submenu->append(*caf6);
-    submenu->append(*caf7);
-    submenu->append(*caf8);
-    submenu->append(*cad);
-    submenu->append(*cab);
+    submenu->append(*connect);
+    submenu->append(*disconnect);
+    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+    submenu->append(*m_capture_keyboard);
+    submenu->append(*send_cad);
+    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+    submenu->append(*screenshot);
+    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+    submenu->append(*appquit);
 
-    sendkey->set_submenu(*submenu);
+    remote->set_submenu(*submenu);
 
     auto view = Gtk::manage(new Gtk::MenuItem("_View", true));
     menubar->append(*view);
@@ -78,8 +74,8 @@ Vnc::DisplayWindow::DisplayWindow()
     submenu = Gtk::manage(new Gtk::Menu);
 
     m_fullscreen = Gtk::manage(new Gtk::CheckMenuItem("_Full Screen", true));
-    m_scaling = Gtk::manage(new Gtk::CheckMenuItem("Scaled display", true));
-    m_smoothing = Gtk::manage(new Gtk::CheckMenuItem("Smooth scaling", true));
+    m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
+    m_smoothing = Gtk::manage(new Gtk::CheckMenuItem("S_mooth Scaling", true));
     m_smoothing->set_active(true);
 
     submenu->append(*m_fullscreen);
@@ -88,15 +84,15 @@ Vnc::DisplayWindow::DisplayWindow()
 
     view->set_submenu(*submenu);
 
-    auto settings = Gtk::manage(new Gtk::MenuItem("_Settings", true));
-    menubar->append(*settings);
+    auto help = Gtk::manage(new Gtk::MenuItem("_Help", true));
+    menubar->append(*help);
 
     submenu = Gtk::manage(new Gtk::Menu);
 
-    auto showgrabkeydlg = Gtk::manage(new Gtk::MenuItem("_Set grab keys", true));
-    submenu->append(*showgrabkeydlg);
+    auto about = Gtk::manage(new Gtk::MenuItem("_About", true));
+    submenu->append(*about);
 
-    settings->set_submenu(*submenu);
+    help->set_submenu(*submenu);
 
     layout->pack_start(*menubar, false, true);
     layout->pack_start(*m_vnc, true, true);
@@ -137,43 +133,19 @@ Vnc::DisplayWindow::DisplayWindow()
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
     signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
 
-    signal_vnc_keyboard_grab().connect([this]() { disable_modifiers(); });
-    signal_vnc_keyboard_ungrab().connect([this]() { enable_modifiers(); });
-
-    signal_key_press_event().connect(sigc::mem_fun(this, &DisplayWindow::vnc_screenshot));
-
-    caf1->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F1 });
+    m_capture_keyboard->signal_activate().connect([this]() {
+        if (m_capture_keyboard->get_active())
+            disable_modifiers();
+        else
+            enable_modifiers();
     });
-    caf2->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F2 });
-    });
-    caf3->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F3 });
-    });
-    caf4->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F4 });
-    });
-    caf5->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F5 });
-    });
-    caf6->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F6 });
-    });
-    caf7->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F7 });
-    });
-    caf8->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_F8 });
-    });
-    cad->signal_activate().connect([this]() {
+    send_cad->signal_activate().connect([this]() {
         send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_Delete });
     });
-    cab->signal_activate().connect([this]() {
-        send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_BackSpace });
-    });
+    screenshot->signal_activate().connect(sigc::mem_fun(this, &DisplayWindow::vnc_screenshot));
 
-    showgrabkeydlg->signal_activate().connect(sigc::mem_fun(this, &DisplayWindow::on_set_grab_keys));
+    appquit->signal_activate().connect([]() { Gtk::Main::quit(); });
+
     m_fullscreen->signal_toggled().connect([this]() {
         if (m_fullscreen->get_active())
             fullscreen();
@@ -680,19 +652,30 @@ Glib::SignalProxy<void> Vnc::DisplayWindow::signal_vnc_bell()
     return {m_vnc, &VncDisplay_signal_vnc_bell};
 }
 
+void Vnc::DisplayWindow::set_grab_keyboard(bool enable)
+{
+    if (enable)
+        disable_modifiers();
+    else
+        enable_modifiers();
+    m_capture_keyboard->set_active(enable);
+}
+
+bool Vnc::DisplayWindow::get_grab_keyboard()
+{
+    return m_capture_keyboard->get_active();
+}
+
 VncDisplay *Vnc::DisplayWindow::get_vnc()
 {
     return VNC_DISPLAY(m_vnc->gobj());
 }
 
-bool Vnc::DisplayWindow::vnc_screenshot(GdkEventKey *ev)
+void Vnc::DisplayWindow::vnc_screenshot()
 {
-    if (ev->keyval == GDK_KEY_F11) {
-        auto pix = get_pixbuf();
-        pix->save("gvncviewer.png", "png", {"tEXt::Generator App"}, {"gvncviewer"});
-        std::cout << "Screenshot saved to gvncviewer.png" << std::endl;
-    }
-    return false;
+    auto pix = get_pixbuf();
+    pix->save("gsshvnc.png", "png", {"tEXt::Generator App"}, {"gsshvnc"});
+    std::cout << "Screenshot saved to gsshvnc.png" << std::endl;
 }
 
 void Vnc::DisplayWindow::vnc_initialized()
@@ -723,10 +706,10 @@ void Vnc::DisplayWindow::update_title(bool grabbed)
     Glib::ustring title;
 
     if (grabbed) {
-        title = Glib::ustring::compose("(Press %1 to release pointer) %2 - GVncViewer",
+        title = Glib::ustring::compose("(Press %1 to release pointer) %2 - GSshVnc",
                                        seqstr, name);
     } else {
-        title = Glib::ustring::compose("%1 - GVncViewer", name);
+        title = Glib::ustring::compose("%1 - GSshVnc", name);
     }
 
     set_title(title);
@@ -747,7 +730,7 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             prompt++;
             break;
         case VNC_DISPLAY_CREDENTIAL_CLIENTNAME:
-            data[i] = {"gvncviewer", true};
+            data[i] = {"gsshvnc", true};
         default:
             break;
         }
@@ -755,7 +738,7 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
     std::unique_ptr<Gtk::Dialog> dialog;
     if (prompt) {
-        dialog.reset(new Gtk::Dialog("Authentication required"));
+        dialog.reset(new Gtk::Dialog("VNC Authentication"));
         dialog->add_button("_Cancel", Gtk::RESPONSE_CANCEL);
         dialog->add_button("_Ok", Gtk::RESPONSE_OK);
         dialog->set_default_response(Gtk::RESPONSE_OK);
@@ -866,19 +849,4 @@ void Vnc::DisplayWindow::enable_modifiers()
     settings->property_gtk_enable_mnemonics().set_value(m_enable_mnemonics);
 
     m_accel_enabled = true;
-}
-
-void Vnc::DisplayWindow::on_set_grab_keys()
-{
-    Vnc::GrabSequenceDialog dialog(*this);
-
-    dialog.show_all();
-    int result = dialog.run();
-
-    if (result == Gtk::RESPONSE_ACCEPT) {
-        /* Accepted so we make a grab sequence from it */
-        auto seq = dialog.get_sequence();
-        set_grab_keys(seq);
-        update_title(false);
-    }
 }
