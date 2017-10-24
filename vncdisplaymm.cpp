@@ -23,7 +23,9 @@
 #include <gtkmm/entry.h>
 #include <gtkmm/separatormenuitem.h>
 #include <gtkmm/settings.h>
+#include <gtkmm/filechooserdialog.h>
 #include <iostream>
+#include <ctime>
 
 #ifdef HAVE_PULSEAUDIO
 #include <vncaudiopulse.h>
@@ -693,11 +695,46 @@ VncDisplay *Vnc::DisplayWindow::get_vnc()
     return VNC_DISPLAY(m_vnc->gobj());
 }
 
+static Glib::ustring gen_screenshot_name(const Glib::ustring &name)
+{
+    char time_buf[64];
+    time_t now = time(nullptr);
+    struct tm *now_tm = localtime(&now);
+    strftime(time_buf, 64, "%Y-%m-%d_%H%M%S", now_tm);
+    std::string clean_name = name;
+    std::replace_if(clean_name.begin(), clean_name.end(), [](char ch) -> bool {
+        return (ch == ':' || ch == '\\' || ch == '/' || ch == '<' || ch == '>'
+                || ch == '*' || ch == '?' || ch == '"' || ch == '|');
+    }, '_');
+    return Glib::ustring::compose("gsshvnc-%1-%2.png", clean_name, time_buf);
+}
+
 void Vnc::DisplayWindow::vnc_screenshot()
 {
+    /* Do this right away, in case the display changes by the time we pick
+     * a filename and save it to disk. */
     auto pix = get_pixbuf();
-    pix->save("gsshvnc.png", "png", {"tEXt::Generator App"}, {"gsshvnc"});
-    std::cout << "Screenshot saved to gsshvnc.png" << std::endl;
+
+    Gtk::FileChooserDialog dialog(*this, "Save Screenshot", Gtk::FILE_CHOOSER_ACTION_SAVE);
+    dialog.set_local_only(true);
+    dialog.set_do_overwrite_confirmation(true);
+    dialog.set_current_name(gen_screenshot_name(get_name()));
+    dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
+    dialog.add_button("_Save", Gtk::RESPONSE_ACCEPT);
+
+    auto filter_png = Gtk::FileFilter::create();
+    filter_png->set_name("PNG Files");
+    filter_png->add_mime_type("image/png");
+    dialog.add_filter(filter_png);
+
+    int response = dialog.run();
+    if (response == Gtk::RESPONSE_ACCEPT) {
+        auto filename = dialog.get_filename();
+        if (!filename.empty()) {
+            pix->save(filename, "png", {"tEXt::Generator App"}, {"gsshvnc"});
+            std::cout << "Screenshot saved to " << filename << std::endl;
+        }
+    }
 }
 
 void Vnc::DisplayWindow::vnc_initialized()
@@ -759,7 +796,7 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
     std::unique_ptr<Gtk::Dialog> dialog;
     if (prompt) {
-        dialog.reset(new Gtk::Dialog("VNC Authentication"));
+        dialog = std::make_unique<Gtk::Dialog>("VNC Authentication");
         dialog->add_button("_Cancel", Gtk::RESPONSE_CANCEL);
         dialog->add_button("_Ok", Gtk::RESPONSE_OK);
         dialog->set_default_response(Gtk::RESPONSE_OK);
