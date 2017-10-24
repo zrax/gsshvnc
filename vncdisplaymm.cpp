@@ -25,6 +25,10 @@
 #include <gtkmm/settings.h>
 #include <iostream>
 
+#ifdef HAVE_PULSEAUDIO
+#include <vncaudiopulse.h>
+#endif
+
 #ifdef __GNUC__
 /* This is out of my control when gtk-vnc uses deprecated APIs */
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -39,7 +43,7 @@ Vnc::DisplayWindow::DisplayWindow()
     auto menubar = Gtk::manage(new Gtk::MenuBar);
 
 #ifdef HAVE_PULSEAUDIO
-    pa = vnc_audio_pulse_new();
+    m_pulse_ifc = vnc_audio_pulse_new();
 #endif
 
     set_resizable(true);
@@ -703,15 +707,14 @@ void Vnc::DisplayWindow::vnc_initialized()
     show_all();
 
 #ifdef HAVE_PULSEAUDIO
-    VncConnection *conn;
     VncAudioFormat format = {
         VNC_AUDIO_FORMAT_RAW_S32,
         2,
         44100,
     };
-    conn = vnc_display_get_connection(VNC_DISPLAY(vncdisplay));
+    VncConnection *conn = vnc_display_get_connection(get_vnc());
     vnc_connection_set_audio_format(conn, &format);
-    vnc_connection_set_audio(conn, VNC_AUDIO(pa));
+    vnc_connection_set_audio(conn, VNC_AUDIO(m_pulse_ifc));
     vnc_connection_audio_enable(conn);
 #endif
 }

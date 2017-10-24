@@ -135,6 +135,8 @@ private:
     Gtk::CheckMenuItem *m_scaling;
     Gtk::CheckMenuItem *m_smoothing;
 
+    void *m_pulse_ifc;
+
     void vnc_screenshot();
     void vnc_initialized();
     void update_title(bool grabbed);

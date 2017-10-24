@@ -31,6 +31,12 @@ endif()
 include_directories(${GTK_VNC_INCLUDE_DIRS} ${GVNC_INCLUDE_DIRS})
 include_directories(${GTKMM_INCLUDE_DIRS})
 
+pkg_check_modules(GVNCPULSE gvncpulse-1.0)
+if(GVNCPULSE_FOUND)
+    add_definitions(-DHAVE_PULSEAUDIO)
+    include_directories(${GVNCPULSE_INCLUDE_DIRS})
+endif()
+
 set(gsshvnc_HEADERS
     vncdisplaymm.h
     vncgrabsequencemm.h
@@ -45,3 +51,6 @@ set(gsshvnc_SOURCES
 add_executable(gsshvnc ${gsshvnc_HEADERS} ${gsshvnc_SOURCES})
 target_link_libraries(gsshvnc ${GTK_VNC_LIBRARIES} ${GVNC_LIBRARIES})
 target_link_libraries(gsshvnc ${GTKMM_LIBRARIES})
+if(GVNCPULSE_FOUND)
+    target_link_libraries(gsshvnc ${GVNCPULSE_LIBRARIES})
+endif()
