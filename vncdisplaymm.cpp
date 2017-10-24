@@ -128,12 +128,14 @@ Vnc::DisplayWindow::DisplayWindow()
         auto text = Glib::ustring::compose("VNC Error: %1", message);
         Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
         (void)dialog.run();
+        Gtk::Main::quit();
     });
     signal_vnc_auth_credential().connect(sigc::mem_fun(this, &DisplayWindow::vnc_credential));
     signal_vnc_auth_failure().connect([this](const Glib::ustring &message) {
         auto text = Glib::ustring::compose("VNC Authentication failed: %1", message);
         Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
         (void)dialog.run();
+        Gtk::Main::quit();
     });
 
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
