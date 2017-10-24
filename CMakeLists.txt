@@ -38,12 +38,14 @@ if(GVNCPULSE_FOUND)
 endif()
 
 set(gsshvnc_HEADERS
+    vncconnectdialog.h
     vncdisplaymm.h
     vncgrabsequencemm.h
 )
 
 set(gsshvnc_SOURCES
     gvncviewer.cpp
+    vncconnectdialog.cpp
     vncdisplaymm.cpp
     vncgrabsequencemm.cpp
 )

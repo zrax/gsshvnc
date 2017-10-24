@@ -19,11 +19,12 @@
 #include <glibmm/exceptionhandler.h>
 #include <gtkmm/main.h>
 #include <gtkmm/box.h>
-#include <gtkmm/table.h>
+#include <gtkmm/grid.h>
 #include <gtkmm/entry.h>
 #include <gtkmm/separatormenuitem.h>
 #include <gtkmm/settings.h>
 #include <gtkmm/filechooserdialog.h>
+#include <gtkmm/messagedialog.h>
 #include <iostream>
 #include <ctime>
 
@@ -55,16 +56,11 @@ Vnc::DisplayWindow::DisplayWindow()
 
     auto submenu = Gtk::manage(new Gtk::Menu);
 
-    auto connect = Gtk::manage(new Gtk::MenuItem("_Connect", true));
-    auto disconnect = Gtk::manage(new Gtk::MenuItem("_Disconnect", true));
     m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture _Keyboard", true));
     auto send_cad = Gtk::manage(new Gtk::MenuItem("Send Ctrl+Alt+_Del", true));
     auto screenshot = Gtk::manage(new Gtk::MenuItem("Take _Screenshot", true));
     auto appquit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
 
-    submenu->append(*connect);
-    submenu->append(*disconnect);
-    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*m_capture_keyboard);
     submenu->append(*send_cad);
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
@@ -117,28 +113,27 @@ Vnc::DisplayWindow::DisplayWindow()
         m_accel_groups.emplace_back(group);
     }
 
-    signal_vnc_connected().connect([this]() {
-        std::cout << "Connected to server" << std::endl;
-        m_connected = true;
-    });
+    signal_vnc_connected().connect([this]() { m_connected = true; });
     signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
     signal_vnc_disconnected().connect([this]() {
-        if (m_connected)
-            std::cout << "Disconnected from server" << std::endl;
-        else
-            std::cout << "Failed to connect to server" << std::endl;
+        if (m_connected) {
+            // TODO: Offer to reconnect when connection lost unexpectedly
+            Gtk::MessageDialog dialog(*this, "VNC Session Disconnected", false, Gtk::MESSAGE_INFO);
+            (void)dialog.run();
+        }
+        m_connected = false;
         Gtk::Main::quit();
     });
-    signal_vnc_error().connect([](const Glib::ustring &message) {
-        std::cerr << "Error: " << message << std::endl;
+    signal_vnc_error().connect([this](const Glib::ustring &message) {
+        auto text = Glib::ustring::compose("VNC Error: %1", message);
+        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
     });
     signal_vnc_auth_credential().connect(sigc::mem_fun(this, &DisplayWindow::vnc_credential));
-    signal_vnc_auth_failure().connect([](const Glib::ustring &message) {
-        std::cout << "Authentication failed: " << message << std::endl;
-    });
-
-    signal_vnc_desktop_resize().connect([](int width, int height) {
-        std::cout << "Remote desktop size changed to " << width << "x" << height << std::endl;
+    signal_vnc_auth_failure().connect([this](const Glib::ustring &message) {
+        auto text = Glib::ustring::compose("VNC Authentication failed: %1", message);
+        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
     });
 
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
@@ -720,7 +715,8 @@ void Vnc::DisplayWindow::vnc_screenshot()
     dialog.set_do_overwrite_confirmation(true);
     dialog.set_current_name(gen_screenshot_name(get_name()));
     dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
-    dialog.add_button("_Save", Gtk::RESPONSE_ACCEPT);
+    dialog.add_button("_Save", Gtk::RESPONSE_OK);
+    dialog.set_default_response(Gtk::RESPONSE_OK);
 
     auto filter_png = Gtk::FileFilter::create();
     filter_png->set_name("PNG Files");
@@ -728,7 +724,7 @@ void Vnc::DisplayWindow::vnc_screenshot()
     dialog.add_filter(filter_png);
 
     int response = dialog.run();
-    if (response == Gtk::RESPONSE_ACCEPT) {
+    if (response == Gtk::RESPONSE_OK) {
         auto filename = dialog.get_filename();
         if (!filename.empty()) {
             pix->save(filename, "png", {"tEXt::Generator App"}, {"gsshvnc"});
@@ -739,7 +735,6 @@ void Vnc::DisplayWindow::vnc_screenshot()
 
 void Vnc::DisplayWindow::vnc_initialized()
 {
-    std::cout << "Connection initialized" << std::endl;
     update_title(false);
     show_all();
 
@@ -775,8 +770,6 @@ void Vnc::DisplayWindow::update_title(bool grabbed)
 
 void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> &credList)
 {
-    std::cout << "Got credential request for " << credList.size() << " credential(s)" << std::endl;
-
     std::vector<std::pair<Glib::ustring, bool>> data;
     data.resize(credList.size(), {Glib::ustring(), false});
 
@@ -796,12 +789,15 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
     std::unique_ptr<Gtk::Dialog> dialog;
     if (prompt) {
-        dialog = std::make_unique<Gtk::Dialog>("VNC Authentication");
+        dialog = std::make_unique<Gtk::Dialog>("VNC Authentication", *this);
         dialog->add_button("_Cancel", Gtk::RESPONSE_CANCEL);
         dialog->add_button("_Ok", Gtk::RESPONSE_OK);
         dialog->set_default_response(Gtk::RESPONSE_OK);
 
-        auto *box = Gtk::manage(new Gtk::Table(2, 2));
+        auto *grid = Gtk::manage(new Gtk::Grid);
+        grid->set_row_spacing(3);
+        grid->set_column_spacing(3);
+        grid->set_border_width(3);
         std::vector<Gtk::Label *> label;
         std::vector<Gtk::Entry *> entry;
         label.resize(prompt, nullptr);
@@ -825,13 +821,13 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             if (cred == VNC_DISPLAY_CREDENTIAL_PASSWORD)
                 entry[row]->set_visibility(false);
 
-            box->attach(*label[i], 0, 1, row, row+1, Gtk::SHRINK, Gtk::SHRINK, 3, 3);
-            box->attach(*entry[i], 1, 2, row, row+1, Gtk::SHRINK, Gtk::SHRINK, 3, 3);
+            grid->attach(*label[i], 0, row, 1, 1);
+            grid->attach(*entry[i], 1, row, 1, 1);
             row++;
         }
 
         auto vbox = dialog->get_child();
-        dynamic_cast<Gtk::Container *>(vbox)->add(*box);
+        dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
 
         dialog->show_all();
         int response = dialog->run();
@@ -850,6 +846,9 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
                 }
                 row++;
             }
+        } else {
+            close_vnc();
+            return;
         }
     }
 
@@ -857,11 +856,11 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
         auto cred = credList[i];
         if (data[i].second) {
             if (set_credential(cred, data[i].first)) {
-                std::cout << "Failed to set credential type " << cred << std::endl;
+                std::cerr << "Failed to set credential type " << cred << std::endl;
                 close_vnc();
             }
         } else {
-            std::cout << "Unsupported credential type " << cred << std::endl;
+            std::cerr << "Unsupported credential type " << cred << std::endl;
             close_vnc();
         }
     }
