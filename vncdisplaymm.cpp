@@ -141,6 +141,18 @@ Vnc::DisplayWindow::DisplayWindow()
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
     signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
 
+    m_clipboard = Gtk::Clipboard::get(GDK_SELECTION_CLIPBOARD);
+    signal_vnc_server_cut_text().connect([this](const Glib::ustring &text) {
+        m_clipboard_text = text;
+        m_clipboard->set_text(text);
+        m_clipboard->store();
+    });
+    m_clipboard->signal_owner_change().connect([this](GdkEventOwnerChange *) {
+        auto text = m_clipboard->wait_for_text();
+        if (!text.empty() && text != m_clipboard_text)
+            client_cut_text(text);
+    });
+
     m_capture_keyboard->signal_activate().connect([this]() {
         if (m_capture_keyboard->get_active())
             disable_modifiers();
