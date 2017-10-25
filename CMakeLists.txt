@@ -37,7 +37,14 @@ if(GVNCPULSE_FOUND)
     include_directories(${GVNCPULSE_INCLUDE_DIRS})
 endif()
 
+pkg_check_modules(LIBSSH REQUIRED libssh libssh_threads)
+include_directories(${LIBSSH_INCLUDE_DIRS})
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 set(gsshvnc_HEADERS
+    sshtunnel.h
     vncconnectdialog.h
     vncdisplaymm.h
     vncgrabsequencemm.h
@@ -45,6 +52,7 @@ set(gsshvnc_HEADERS
 
 set(gsshvnc_SOURCES
     gvncviewer.cpp
+    sshtunnel.cpp
     vncconnectdialog.cpp
     vncdisplaymm.cpp
     vncgrabsequencemm.cpp
@@ -56,3 +64,5 @@ target_link_libraries(gsshvnc ${GTKMM_LIBRARIES})
 if(GVNCPULSE_FOUND)
     target_link_libraries(gsshvnc ${GVNCPULSE_LIBRARIES})
 endif()
+target_link_libraries(gsshvnc ${LIBSSH_LIBRARIES})
+target_link_libraries(gsshvnc Threads::Threads)

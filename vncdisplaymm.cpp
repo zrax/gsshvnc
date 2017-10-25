@@ -761,10 +761,10 @@ void Vnc::DisplayWindow::update_title(bool grabbed)
     Glib::ustring title;
 
     if (grabbed) {
-        title = Glib::ustring::compose("(Press %1 to release pointer) %2 - GSshVnc",
+        title = Glib::ustring::compose("(Press %1 to release pointer) %2 - gsshvnc",
                                        seqstr, name);
     } else {
-        title = Glib::ustring::compose("%1 - GSshVnc", name);
+        title = Glib::ustring::compose("%1 - gsshvnc", name);
     }
 
     set_title(title);

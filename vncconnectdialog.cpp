@@ -45,6 +45,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_host = Gtk::manage(new Gtk::Entry);
     m_host->set_alignment(Gtk::ALIGN_FILL);
     m_host->set_placeholder_text("hostname[:display]");
+    m_host->set_activates_default(true);
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_host);
@@ -56,6 +57,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_ssh_host = Gtk::manage(new Gtk::Entry);
     m_ssh_host->set_alignment(Gtk::ALIGN_FILL);
     m_ssh_host->set_placeholder_text("[user@]hostname[:port]");
+    m_ssh_host->set_activates_default(true);
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_host);
@@ -94,7 +96,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     dynamic_cast<Gtk::Container *>(vbox)->add(*box);
 }
 
-bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc)
+bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
 {
     vnc.set_shared_flag(true);
     vnc.set_depth((VncDisplayDepthColor)std::stoi(m_color_depth->get_active_id()));
@@ -110,6 +112,18 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc)
     } else {
         port = "5900";
     }
+
+    Glib::ustring ssh_string = m_ssh_host->get_text();
+    if (!ssh_string.empty()) {
+        if (!tunnel.connect(ssh_string))
+            return false;
+        guint16 local_port = tunnel.forward_port(hostname, std::stoi(port));
+        if (local_port == 0)
+            return false;
+        hostname = "127.0.0.1";
+        port = std::to_string(local_port);
+    }
+
     if (!vnc.open_host(hostname, port))
         return false;
 

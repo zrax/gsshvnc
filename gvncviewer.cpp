@@ -19,10 +19,15 @@
 
 #include <gtkmm/main.h>
 #include <gtkmm/messagedialog.h>
+#include <libssh/callbacks.h>
 #include <iostream>
 
 int main(int argc, char *argv[])
 {
+    // Tell libssh that we intend to use pthread-based threading
+    ssh_threads_set_callbacks(ssh_threads_get_pthread());
+    ssh_init();
+
     auto name = Glib::ustring::compose("- Simple SSH/VNC Client on Gtk-VNC %1",
                                        vnc_util_get_version_string());
     static const char help_msg[] = "Run 'gsshvnc --help' to see a full list of available command line options";
@@ -40,13 +45,14 @@ int main(int argc, char *argv[])
     }
 
     Vnc::DisplayWindow vnc;
+    SshTunnel ssh(vnc);
 
     {
         Vnc::ConnectDialog dialog(vnc);
         dialog.show_all();
         int response = dialog.run();
         if (response == Gtk::RESPONSE_OK) {
-            if (!dialog.configure(vnc)) {
+            if (!dialog.configure(vnc, ssh)) {
                 Gtk::MessageDialog msg_dialog(vnc, "Could not connect to VNC server",
                                               false, Gtk::MESSAGE_ERROR);
                 (void)msg_dialog.run();
@@ -63,6 +69,9 @@ int main(int argc, char *argv[])
     });
 
     Gtk::Main::run();
+
+    ssh.disconnect();
+    ssh_finalize();
 
     return 0;
 }

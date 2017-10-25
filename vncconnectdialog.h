@@ -17,6 +17,8 @@
 #ifndef _VNCCONNECTDIALOG_H
 #define _VNCCONNECTDIALOG_H
 
+#include "sshtunnel.h"
+
 #include <gtkmm/dialog.h>
 
 namespace Gtk
@@ -38,7 +40,7 @@ class ConnectDialog : public Gtk::Dialog
 public:
     explicit ConnectDialog(Gtk::Window &parent);
 
-    bool configure(Vnc::DisplayWindow &vnc);
+    bool configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel);
 
 private:
     Gtk::Entry *m_host;
