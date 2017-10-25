@@ -22,6 +22,36 @@
 #include <libssh/callbacks.h>
 #include <iostream>
 
+static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
+{
+    Vnc::ConnectDialog dialog(vnc);
+    dialog.show_all();
+    for (int retries = 3; retries; --retries) {
+        int response = dialog.run();
+        if (response != Gtk::RESPONSE_OK)
+            return true;
+
+        if (dialog.configure(vnc, ssh))
+            break;
+
+        Gtk::MessageDialog msg_dialog(vnc, "Failed to connect to VNC server",
+                                      false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
+        if (retries > 1) {
+            msg_dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
+            msg_dialog.add_button("_Retry", Gtk::RESPONSE_REJECT);
+            response = msg_dialog.run();
+            if (response == Gtk::RESPONSE_CANCEL)
+                return false;
+        } else {
+            msg_dialog.add_button("_Ok", Gtk::RESPONSE_OK);
+            (void)msg_dialog.run();
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     // Tell libssh that we intend to use pthread-based threading
@@ -47,21 +77,8 @@ int main(int argc, char *argv[])
     Vnc::DisplayWindow vnc;
     SshTunnel ssh(vnc);
 
-    {
-        Vnc::ConnectDialog dialog(vnc);
-        dialog.show_all();
-        int response = dialog.run();
-        if (response == Gtk::RESPONSE_OK) {
-            if (!dialog.configure(vnc, ssh)) {
-                Gtk::MessageDialog msg_dialog(vnc, "Could not connect to VNC server",
-                                              false, Gtk::MESSAGE_ERROR);
-                (void)msg_dialog.run();
-                return 1;
-            }
-        } else {
-            return 0;
-        }
-    }
+    if (!show_connect_dialog(vnc, ssh))
+        return 1;
 
     vnc.signal_delete_event().connect([](GdkEventAny *) -> bool {
         Gtk::Main::quit();

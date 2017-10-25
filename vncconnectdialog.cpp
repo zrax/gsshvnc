@@ -113,6 +113,9 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
         port = "5900";
     }
 
+    if (hostname.empty())
+        hostname = "127.0.0.1";
+
     Glib::ustring ssh_string = m_ssh_host->get_text();
     if (!ssh_string.empty()) {
         if (!tunnel.connect(ssh_string))

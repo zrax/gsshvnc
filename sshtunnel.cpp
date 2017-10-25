@@ -28,18 +28,20 @@
 #define FORWARD_BUFFER_SIZE 4096
 
 SshTunnel::SshTunnel(Gtk::Window &parent)
-    : m_parent(parent), m_ssh(ssh_new()), m_forward_channel(),
-      m_connected(false), m_eof(false)
+    : m_parent(parent), m_ssh(), m_forward_channel(), m_eof(false)
 { }
 
 SshTunnel::~SshTunnel()
 {
     disconnect();
-    ssh_free(m_ssh);
 }
 
 bool SshTunnel::connect(const Glib::ustring &server)
 {
+    disconnect();
+    m_ssh = ssh_new();
+
+    m_eof = false;
     m_hostname = server;
     std::string username, port;
 
@@ -83,11 +85,15 @@ bool SshTunnel::connect(const Glib::ustring &server)
 
 void SshTunnel::disconnect()
 {
-    m_eof = true;
-    if (m_forward_thread.joinable())
-        m_forward_thread.join();
-    if (m_connected)
-        ssh_disconnect(m_ssh);
+    if (m_ssh) {
+        m_eof = true;
+        if (m_forward_thread.joinable())
+            m_forward_thread.join();
+        if (ssh_is_connected(m_ssh))
+            ssh_disconnect(m_ssh);
+        ssh_free(m_ssh);
+    }
+    m_ssh = nullptr;
 }
 
 #define TUNNEL_PORT_OFFSET 5500

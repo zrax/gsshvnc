@@ -45,7 +45,6 @@ private:
     Gtk::Window &m_parent;
     ssh_session m_ssh;
     ssh_channel m_forward_channel;
-    bool m_connected;
     Glib::ustring m_hostname;
     std::thread m_forward_thread;
     std::atomic_bool m_eof;
