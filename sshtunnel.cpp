@@ -74,7 +74,6 @@ bool SshTunnel::connect(const Glib::ustring &server)
     if (!verify_host())
         return false;
 
-
     // TODO: Support SSH public keys with a passphrase
     if (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS)
         return true;
@@ -282,8 +281,8 @@ bool SshTunnel::prompt_password()
     if (response != Gtk::RESPONSE_OK)
         return false;
 
-    if (ssh_userauth_password(m_ssh, nullptr, password->get_text().c_str())
-            != SSH_AUTH_SUCCESS) {
+    int result = ssh_userauth_password(m_ssh, nullptr, password->get_text().c_str());
+    if (result != SSH_AUTH_SUCCESS) {
         auto text = Glib::ustring::compose("Error connecting to %1: %2", m_hostname,
                                            ssh_get_error(m_ssh));
         Gtk::MessageDialog err_dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
