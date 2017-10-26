@@ -107,6 +107,8 @@ Vnc::DisplayWindow::DisplayWindow()
     add(*layout);
     gtk_widget_realize(m_vnc->gobj());
 
+    set_size_request(600, 400);
+
     // Can't find a pre-wrapped C++ version of this anywhere...
     GSList *accels = gtk_accel_groups_from_object(G_OBJECT(gobj()));
     for ( ; accels; accels = accels->next) {
@@ -782,7 +784,6 @@ void Vnc::DisplayWindow::vnc_screenshot()
 void Vnc::DisplayWindow::vnc_initialized()
 {
     update_title(false);
-    show_all();
 
 #ifdef HAVE_PULSEAUDIO
     VncAudioFormat format = {

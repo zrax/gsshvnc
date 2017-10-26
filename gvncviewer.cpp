@@ -25,15 +25,18 @@
 static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
 {
     Vnc::ConnectDialog dialog(vnc);
-    dialog.show_all();
     for (int retries = 3; retries; --retries) {
+        dialog.show_all();
         int response = dialog.run();
         if (response != Gtk::RESPONSE_OK)
             return true;
 
-        if (dialog.configure(vnc, ssh))
+        if (dialog.configure(vnc, ssh)) {
+            vnc.show_all();
             break;
+        }
 
+        dialog.hide();
         Gtk::MessageDialog msg_dialog(vnc, "Failed to connect to VNC server",
                                       false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
         if (retries > 1) {
