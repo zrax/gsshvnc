@@ -137,7 +137,6 @@ private:
 
     void *m_pulse_ifc;
 
-    Glib::RefPtr<Gtk::Clipboard> m_clipboard;
     Glib::ustring m_clipboard_text;
 
     void vnc_screenshot();

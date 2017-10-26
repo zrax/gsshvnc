@@ -17,6 +17,7 @@
 #include "vncdisplaymm.h"
 
 #include <glibmm/exceptionhandler.h>
+#include <glibmm/main.h>
 #include <gtkmm/main.h>
 #include <gtkmm/box.h>
 #include <gtkmm/grid.h>
@@ -141,14 +142,45 @@ Vnc::DisplayWindow::DisplayWindow()
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
     signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
 
-    m_clipboard = Gtk::Clipboard::get(GDK_SELECTION_CLIPBOARD);
     signal_vnc_server_cut_text().connect([this](const Glib::ustring &text) {
+        auto clipboard = Gtk::Clipboard::get();
         m_clipboard_text = text;
-        m_clipboard->set_text(text);
-        m_clipboard->store();
+        clipboard->set_text(text);
+        clipboard->store();
     });
-    m_clipboard->signal_owner_change().connect([this](GdkEventOwnerChange *) {
-        auto text = m_clipboard->wait_for_text();
+    Gtk::Clipboard::get()->signal_owner_change().connect([this](GdkEventOwnerChange *) {
+        auto clipboard = Gtk::Clipboard::get();
+        Glib::ustring text;
+#ifdef CB_REQUEST_TEXT_IS_BROKEN
+        auto loop = Glib::MainLoop::create(true);
+        std::function<void (const Gtk::SelectionData &)> text_received;
+        text_received = [&text, clipboard, loop, &text_received]
+                        (const Gtk::SelectionData &selection_data) {
+            /* Based on gtk_clipboard_request_text prior to patch that breaks
+               Windows clipboard support */
+            auto result = selection_data.get_text();
+            if (result.empty()) {
+                auto target = selection_data.get_target();
+                if (target == "UTF8_STRING") {
+                    clipboard->request_contents("COMPOUND_TEXT", text_received);
+                    return;
+                } else if (target == "COMPOUND_TEXT") {
+                    clipboard->request_contents("STRING", text_received);
+                    return;
+                }
+            }
+            text = result;
+            loop->quit();
+        };
+        clipboard->request_contents("UTF8_STRING", text_received);
+        if (loop->is_running()) {
+            gdk_threads_leave();
+            loop->run();
+            gdk_threads_enter();
+        }
+#else
+        text = clipboard->wait_for_text();
+#endif
         if (!text.empty() && text != m_clipboard_text)
             client_cut_text(text);
     });
