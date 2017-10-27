@@ -28,7 +28,7 @@
 #define FORWARD_BUFFER_SIZE 4096
 
 SshTunnel::SshTunnel(Gtk::Window &parent)
-    : m_parent(parent), m_ssh(), m_forward_channel(), m_eof(false)
+    : m_parent(parent), m_ssh(), m_remote_port(), m_eof(false)
 { }
 
 SshTunnel::~SshTunnel()
@@ -134,40 +134,28 @@ static Glib::RefPtr<Gio::Socket> get_local_socket(Glib::RefPtr<Gio::Cancellable>
 guint16 SshTunnel::forward_port(const Glib::ustring &remote_host, int remote_port)
 {
     Glib::RefPtr<Gio::Cancellable> cancellable;
-    auto server_sock = get_local_socket(cancellable);
-    if (!server_sock)
+    m_forward_socket = get_local_socket(cancellable);
+    if (!m_forward_socket)
         return 0;
-
-    m_forward_channel = ssh_channel_new(m_ssh);
-    if (!m_forward_channel)
-        return 0;
-
-    auto local_address = Glib::RefPtr<Gio::InetSocketAddress>::cast_dynamic(server_sock->get_local_address());
-    if (ssh_channel_open_forward(m_forward_channel, remote_host.c_str(), remote_port,
-                                 "127.0.0.1", local_address->get_port()) != SSH_OK) {
-        ssh_channel_free(m_forward_channel);
-        return 0;
-    }
 
     int ssh_fd = ssh_get_fd(m_ssh);
     if (ssh_fd < 0) {
         auto text = Glib::ustring::compose("Error getting SSH handle: %1", ssh_get_error(m_ssh));
         Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
         (void)dialog.run();
-        ssh_channel_free(m_forward_channel);
         return 0;
     }
 
-    server_sock->set_listen_backlog(1);
-    server_sock->listen();
-    m_forward_thread = std::thread([this, cancellable, server_sock, ssh_fd]() {
-        tunnel_proc(server_sock, ssh_fd);
-        if (m_forward_channel) {
-            ssh_channel_free(m_forward_channel);
-            m_forward_channel = nullptr;
-        }
+    m_remote_host = remote_host;
+    m_remote_port = remote_port;
+
+    m_forward_socket->set_listen_backlog(5);
+    m_forward_socket->listen();
+    m_forward_thread = std::thread([this, cancellable, ssh_fd]() {
+        tunnel_server(ssh_fd);
     });
 
+    auto local_address = Glib::RefPtr<Gio::InetSocketAddress>::cast_dynamic(m_forward_socket->get_local_address());
     return local_address->get_port();
 }
 
@@ -299,14 +287,44 @@ bool SshTunnel::prompt_password()
     return true;
 }
 
-void SshTunnel::tunnel_proc(Glib::RefPtr<Gio::Socket> server_sock, int ssh_fd)
+struct ForwardClient
 {
-    ssh_channel r_channels[] = { m_forward_channel, nullptr };
-    ssh_channel w_channels[] = { nullptr,           nullptr };
-    Glib::RefPtr<Gio::Socket> client_sock;
+    ssh_channel m_channel;
+    Glib::RefPtr<Gio::Socket> m_socket;
+
+    ForwardClient() : m_channel() { }
+
+    ~ForwardClient()
+    {
+        if (m_channel)
+            ssh_channel_free(m_channel);
+    }
+
+    ForwardClient(ForwardClient &&src) noexcept
+        : m_channel(src.m_channel), m_socket(std::move(src.m_socket))
+    {
+        src.m_channel = nullptr;
+    }
+
+    ForwardClient &operator=(ForwardClient &&src) noexcept
+    {
+        m_channel = src.m_channel;
+        m_socket = std::move(src.m_socket);
+        src.m_channel = nullptr;
+        return *this;
+    }
+
+    ForwardClient(const ForwardClient &) = delete;
+    ForwardClient &operator=(const ForwardClient &) = delete;
+};
+
+void SshTunnel::tunnel_server(int ssh_fd)
+{
+    std::vector<ssh_channel> r_channels, w_channels;
+    std::vector<ForwardClient> clients;
     fd_set rfds;
     struct timeval timeout;
-    int server_fd = server_sock->get_fd();
+    int server_fd = m_forward_socket->get_fd();
     char buffer[FORWARD_BUFFER_SIZE];
 
     for ( ;; ) {
@@ -315,82 +333,118 @@ void SshTunnel::tunnel_proc(Glib::RefPtr<Gio::Socket> server_sock, int ssh_fd)
         if (server_fd)
             FD_SET(server_fd, &rfds);
         int maxfd = std::max(ssh_fd, server_fd) + 1;
-        if (client_sock) {
-            int fd = client_sock->get_fd();
+        r_channels.resize(clients.size() + 1);
+        w_channels.resize(clients.size() + 1);
+        for (size_t i = 0; i < clients.size(); ++i) {
+            r_channels[i] = clients[i].m_channel;
+            w_channels[i] = nullptr;
+            int fd = clients[i].m_socket->get_fd();
             FD_SET(fd, &rfds);
             maxfd = std::max(maxfd, fd + 1);
         }
+        r_channels[clients.size()] = nullptr;
+        w_channels[clients.size()] = nullptr;
 
         timeout.tv_sec = 0;
         timeout.tv_usec = 200000;
-        int result = ssh_select(r_channels, w_channels, maxfd, &rfds, &timeout);
+        int result = ssh_select(r_channels.data(), w_channels.data(),
+                                maxfd, &rfds, &timeout);
         if (m_eof)
             return;
         if (result == EINTR || result == SSH_EINTR)
             continue;
+
         if (FD_ISSET(server_fd, &rfds)) {
-            if (client_sock)
-                std::cerr << "Got extra request for client socket.  Ignoring" << std::endl;
-            else
-                client_sock = server_sock->accept();
+            ForwardClient client;
+            client.m_socket = m_forward_socket->accept();
+            client.m_channel = ssh_channel_new(m_ssh);
+            if (!client.m_channel) {
+                std::cerr << "Error creating forwarding channel: "
+                          << ssh_get_error(m_ssh) << std::endl;
+                continue;
+            }
+
+            auto local_address = Glib::RefPtr<Gio::InetSocketAddress>::cast_dynamic(m_forward_socket->get_local_address());
+            if (ssh_channel_open_forward(client.m_channel, m_remote_host.c_str(), m_remote_port,
+                                         local_address->get_address()->to_string().c_str(),
+                                         local_address->get_port()) != SSH_OK) {
+                std::cerr << "Error opening forwarding channel: "
+                          << ssh_get_error(m_ssh) << std::endl;
+                continue;
+            }
+            clients.emplace_back(std::move(client));
             continue;
         }
-        if (client_sock && FD_ISSET(client_sock->get_fd(), &rfds)) {
-            gssize in_size = client_sock->receive(buffer, FORWARD_BUFFER_SIZE);
-            if (in_size == 0) {
-                ssh_channel_send_eof(m_forward_channel);
-                client_sock->close();
-                client_sock = {};
+
+        auto client = clients.begin();
+        while (client != clients.end()) {
+            if (!FD_ISSET(client->m_socket->get_fd(), &rfds)) {
+                ++client;
+                continue;
             }
+
+            gssize in_size = client->m_socket->receive(buffer, FORWARD_BUFFER_SIZE);
+            if (in_size == 0) {
+                ssh_channel_send_eof(client->m_channel);
+                client = clients.erase(client);
+                continue;
+            }
+
             char *bufp = buffer;
             while (in_size) {
-                int out_size = ssh_channel_write(m_forward_channel, bufp, in_size);
+                int out_size = ssh_channel_write(client->m_channel, bufp, in_size);
                 if (out_size < 0) {
                     std::cerr << "Error writing to SSH channel: "
                               << ssh_get_error(m_ssh) << std::endl;
-                    return;
+                    ssh_channel_close(client->m_channel);
+                    break;
                 }
                 in_size -= out_size;
                 bufp += out_size;
             }
+            if (ssh_channel_is_closed(client->m_channel))
+                client = clients.erase(client);
+            else
+                ++client;
         }
-        if (m_forward_channel && ssh_channel_is_closed(m_forward_channel)) {
-            ssh_channel_free(m_forward_channel);
-            r_channels[0] = nullptr;
-            m_forward_channel = nullptr;
-        }
-        if (w_channels[0] && client_sock) {
+
+        client = clients.begin();
+        while (client != clients.end()) {
+            if (std::find(w_channels.begin(), w_channels.end(), client->m_channel) == w_channels.end()) {
+                ++client;
+                continue;
+            }
+
             for (int is_stderr : {0, 1}) {
-                while (m_forward_channel && ssh_channel_is_open(m_forward_channel)
-                       && ssh_channel_poll(m_forward_channel, is_stderr)) {
-                    int in_size = ssh_channel_read(m_forward_channel, buffer,
+                while (ssh_channel_is_open(client->m_channel)
+                       && ssh_channel_poll(client->m_channel, is_stderr)) {
+                    int in_size = ssh_channel_read(client->m_channel, buffer,
                                                    FORWARD_BUFFER_SIZE, 0);
                     if (in_size < 0) {
                         std::cerr << "Error reading from SSH channel: "
                                   << ssh_get_error(m_ssh) << std::endl;
-                        return;
+                        ssh_channel_close(client->m_channel);
+                        continue;
                     }
-                    if (in_size == 0) {
-                        ssh_channel_free(m_forward_channel);
-                        r_channels[0] = nullptr;
-                        m_forward_channel = nullptr;
-                    }
+                    if (in_size == 0)
+                        ssh_channel_close(client->m_channel);
+                    gchar *bufp = buffer;
                     while (in_size) {
-                        gchar *bufp = buffer;
-                        gssize out_size = client_sock->send(bufp, in_size);
+                        gssize out_size = client->m_socket->send(bufp, in_size);
                         if (out_size < 0) {
                             std::cerr << "Error writing to local port" << std::endl;
-                            return;
+                            ssh_channel_close(client->m_channel);
+                            continue;
                         }
                         in_size -= out_size;
                         bufp += out_size;
                     }
                 }
             }
-        }
-        if (m_forward_channel && ssh_channel_is_closed(m_forward_channel)) {
-            ssh_channel_free(m_forward_channel);
-            m_forward_channel = nullptr;
+            if (ssh_channel_is_closed(client->m_channel))
+                client = clients.erase(client);
+            else
+                ++client;
         }
     }
 }

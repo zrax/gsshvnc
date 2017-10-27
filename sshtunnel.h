@@ -44,14 +44,16 @@ public:
 private:
     Gtk::Window &m_parent;
     ssh_session m_ssh;
-    ssh_channel m_forward_channel;
     Glib::ustring m_hostname;
+    Glib::RefPtr<Gio::Socket> m_forward_socket;
     std::thread m_forward_thread;
+    Glib::ustring m_remote_host;
+    int m_remote_port;
     std::atomic_bool m_eof;
 
     bool verify_host();
     bool prompt_password();
-    void tunnel_proc(Glib::RefPtr<Gio::Socket> server_sock, int ssh_fd);
+    void tunnel_server(int ssh_fd);
 };
 
 #endif
