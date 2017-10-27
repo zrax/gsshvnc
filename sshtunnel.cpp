@@ -150,7 +150,14 @@ guint16 SshTunnel::forward_port(const Glib::ustring &remote_host, int remote_por
     m_remote_port = remote_port;
 
     m_forward_socket->set_listen_backlog(5);
-    m_forward_socket->listen();
+    try {
+        m_forward_socket->listen();
+    } catch (Gio::Error &err) {
+        auto text = Glib::ustring::compose("Error listening on SSH forward port: %1", err.what());
+        Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
+        return 0;
+    }
     m_forward_thread = std::thread([this, cancellable, ssh_fd]() {
         tunnel_server(ssh_fd);
     });
@@ -356,7 +363,13 @@ void SshTunnel::tunnel_server(int ssh_fd)
 
         if (FD_ISSET(server_fd, &rfds)) {
             ForwardClient client;
-            client.m_socket = m_forward_socket->accept();
+            try {
+                client.m_socket = m_forward_socket->accept();
+            } catch (Gio::Error &err) {
+                std::cerr << "Error accepting forward socket: "
+                          << err.what() << std::endl;
+                continue;
+            }
             client.m_channel = ssh_channel_new(m_ssh);
             if (!client.m_channel) {
                 std::cerr << "Error creating forwarding channel: "
@@ -383,7 +396,15 @@ void SshTunnel::tunnel_server(int ssh_fd)
                 continue;
             }
 
-            gssize in_size = client->m_socket->receive(buffer, FORWARD_BUFFER_SIZE);
+            gssize in_size;
+            try {
+                in_size = client->m_socket->receive(buffer, FORWARD_BUFFER_SIZE);
+            } catch (Gio::Error &err) {
+                std::cerr << "Error reading from local socket: "
+                          << err.what() << std::endl;
+                client = clients.erase(client);
+                break;
+            }
             if (in_size == 0) {
                 ssh_channel_send_eof(client->m_channel);
                 client = clients.erase(client);
@@ -430,9 +451,12 @@ void SshTunnel::tunnel_server(int ssh_fd)
                         ssh_channel_close(client->m_channel);
                     gchar *bufp = buffer;
                     while (in_size) {
-                        gssize out_size = client->m_socket->send(bufp, in_size);
-                        if (out_size < 0) {
-                            std::cerr << "Error writing to local port" << std::endl;
+                        gssize out_size;
+                        try {
+                            out_size = client->m_socket->send(bufp, in_size);
+                        } catch (Gio::Error &err) {
+                            std::cerr << "Error writing to local socket: "
+                                      << err.what() << std::endl;
                             ssh_channel_close(client->m_channel);
                             continue;
                         }
