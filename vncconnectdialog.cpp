@@ -107,7 +107,11 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
 
     auto ppos = hostname.find(':');
     if (ppos != Glib::ustring::npos) {
-        port = std::to_string(5900 + std::stoi(hostname.substr(ppos + 1)));
+        int port_num = std::stoi(hostname.substr(ppos + 1));
+        if (port_num > 999)
+            port = std::to_string(port_num);
+        else
+            port = std::to_string(5900 + port_num);
         hostname.resize(ppos);
     } else {
         port = "5900";
