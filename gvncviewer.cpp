@@ -29,11 +29,11 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
         dialog.show_all();
         int response = dialog.run();
         if (response != Gtk::RESPONSE_OK)
-            return true;
+            return false;
 
         if (dialog.configure(vnc, ssh)) {
             vnc.show_all();
-            break;
+            return true;
         }
 
         dialog.hide();
@@ -41,18 +41,18 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
                                       false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
         if (retries > 1) {
             msg_dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
-            msg_dialog.add_button("_Retry", Gtk::RESPONSE_REJECT);
+            msg_dialog.add_button("_Retry", Gtk::RESPONSE_YES);
+            msg_dialog.set_default_response(Gtk::RESPONSE_YES);
             response = msg_dialog.run();
-            if (response == Gtk::RESPONSE_CANCEL)
+            if (response != Gtk::RESPONSE_YES)
                 return false;
         } else {
             msg_dialog.add_button("_Ok", Gtk::RESPONSE_OK);
             (void)msg_dialog.run();
-            return false;
         }
     }
 
-    return true;
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     SshTunnel ssh(vnc);
 
     if (!show_connect_dialog(vnc, ssh))
-        return 1;
+        return 0;
 
     vnc.signal_delete_event().connect([](GdkEventAny *) -> bool {
         Gtk::Main::quit();
