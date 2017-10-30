@@ -16,7 +16,6 @@
 
 #include "sshtunnel.h"
 
-#include <glibmm/miscutils.h>
 #include <gtkmm/dialog.h>
 #include <gtkmm/grid.h>
 #include <gtkmm/entry.h>
@@ -36,22 +35,14 @@ SshTunnel::~SshTunnel()
     disconnect();
 }
 
-bool SshTunnel::connect(const Glib::ustring &server)
+bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &username)
 {
     disconnect();
     m_ssh = ssh_new();
 
     m_eof = false;
     m_hostname = server;
-    std::string username, port;
-
-    auto upos = m_hostname.find('@');
-    if (upos != std::string::npos) {
-        username = m_hostname.substr(0, upos);
-        m_hostname = m_hostname.substr(upos + 1);
-    } else {
-        username = Glib::get_user_name();
-    }
+    std::string port;
 
     auto ppos = m_hostname.find(':');
     if (ppos != std::string::npos) {

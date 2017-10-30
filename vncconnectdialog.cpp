@@ -17,6 +17,7 @@
 #include "vncconnectdialog.h"
 #include "vncdisplaymm.h"
 
+#include <glibmm/miscutils.h>
 #include <gtkmm/box.h>
 #include <gtkmm/label.h>
 #include <gtkmm/entry.h>
@@ -41,7 +42,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     auto linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("_Host:", true));
+    label = Gtk::manage(new Gtk::Label("VNC _Host:", true));
     m_host = Gtk::manage(new Gtk::Entry);
     m_host->set_alignment(Gtk::ALIGN_FILL);
     m_host->set_placeholder_text("hostname[:display]");
@@ -51,16 +52,35 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     linebox->pack_start(*m_host);
     box->add(*linebox);
 
+    label = Gtk::manage(new Gtk::Label);
+    label->set_markup("<b>SSH Tunnel</b>");
+    label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
+    label->set_margin_top(10);
+
+    box->add(*label);
+
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("SSH _Tunnel:", true));
+    label = Gtk::manage(new Gtk::Label("_SSH Host:", true));
     m_ssh_host = Gtk::manage(new Gtk::Entry);
     m_ssh_host->set_alignment(Gtk::ALIGN_FILL);
-    m_ssh_host->set_placeholder_text("[user@]hostname[:port]");
+    m_ssh_host->set_placeholder_text("hostname[:port]");
     m_ssh_host->set_activates_default(true);
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_host);
+    box->add(*linebox);
+
+    linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
+    linebox->set_margin_left(15);
+    label = Gtk::manage(new Gtk::Label("SSH _User:", true));
+    m_ssh_user = Gtk::manage(new Gtk::Entry);
+    m_ssh_user->set_alignment(Gtk::ALIGN_FILL);
+    m_ssh_user->set_placeholder_text(Glib::get_user_name());
+    m_ssh_user->set_activates_default(true);
+
+    linebox->pack_start(*label, Gtk::PACK_SHRINK);
+    linebox->pack_start(*m_ssh_user);
     box->add(*linebox);
 
     label = Gtk::manage(new Gtk::Label);
@@ -122,7 +142,10 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
 
     Glib::ustring ssh_string = m_ssh_host->get_text();
     if (!ssh_string.empty()) {
-        if (!tunnel.connect(ssh_string))
+        auto username = m_ssh_user->get_text();
+        if (username.empty())
+            username = Glib::get_user_name();
+        if (!tunnel.connect(ssh_string, username))
             return false;
         guint16 local_port = tunnel.forward_port(hostname, std::stoi(port));
         if (local_port == 0)

@@ -36,7 +36,7 @@ public:
     explicit SshTunnel(Gtk::Window &parent);
     ~SshTunnel();
 
-    bool connect(const Glib::ustring &server);
+    bool connect(const Glib::ustring &server, const Glib::ustring &username);
     void disconnect();
 
     guint16 forward_port(const Glib::ustring &remote_host, int remote_port);

@@ -45,6 +45,7 @@ public:
 private:
     Gtk::Entry *m_host;
     Gtk::Entry *m_ssh_host;
+    Gtk::Entry *m_ssh_user;
     Gtk::CheckButton *m_lossy_compression;
     Gtk::ComboBoxText *m_color_depth;
 };

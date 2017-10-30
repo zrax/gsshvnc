@@ -35,7 +35,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\bin\gsshvnc.exe"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\gsshvnc.exe"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\bin\gsshvnc.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\bin\gsshvnc.exe"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
