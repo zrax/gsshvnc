@@ -63,7 +63,7 @@ set(gsshvnc_SOURCES
     vncgrabsequencemm.cpp
 )
 
-add_executable(gsshvnc ${gsshvnc_HEADERS} ${gsshvnc_SOURCES})
+add_executable(gsshvnc WIN32 ${gsshvnc_HEADERS} ${gsshvnc_SOURCES})
 target_link_libraries(gsshvnc ${GTK_VNC_LIBRARIES} ${GVNC_LIBRARIES})
 target_link_libraries(gsshvnc ${GTKMM_LIBRARIES})
 if(GVNCPULSE_FOUND)

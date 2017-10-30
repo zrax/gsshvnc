@@ -1,0 +1,10 @@
+bin/
+etc/
+lib/
+libexec/
+sbin/
+share/
+ssl/
+/filelist.iss
+/COPYING
+/*.exe
