@@ -220,6 +220,14 @@ bool SshTunnel::verify_host()
             int response = dialog.run();
             if (response == Gtk::RESPONSE_NO)
                 return false;
+
+            if (ssh_write_knownhost(m_ssh) < 0) {
+                auto text = Glib::ustring::compose("Error writing SSH host key: %1",
+                                                   ssh_get_error(m_ssh));
+                Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
+                (void)dialog.run();
+                return false;
+            }
         }
         break;
 
