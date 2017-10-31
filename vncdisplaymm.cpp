@@ -58,7 +58,7 @@ Vnc::DisplayWindow::DisplayWindow()
 
     auto submenu = Gtk::manage(new Gtk::Menu);
 
-    m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture _Keyboard Shortcuts", true));
+    m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture All _Keyboard Input", true));
     auto send_cad = Gtk::manage(new Gtk::MenuItem("Send Ctrl+Alt+_Del", true));
     auto screenshot = Gtk::manage(new Gtk::MenuItem("Take _Screenshot", true));
     auto appquit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
@@ -194,6 +194,7 @@ Vnc::DisplayWindow::DisplayWindow()
             disable_modifiers();
         else
             enable_modifiers();
+        set_keyboard_grab(enable);
 
         AppSettings settings;
         settings.set_capture_keyboard(enable);
@@ -227,6 +228,22 @@ Vnc::DisplayWindow::DisplayWindow()
         settings.set_smooth_scaling(enable);
     });
 #endif
+
+    // Don't capture keyboard when the window doesn't have focus
+    signal_focus_out_event().connect([this](GdkEventFocus *) -> bool {
+        if (m_capture_keyboard->get_active()) {
+            set_keyboard_grab(false);
+            set_pointer_grab(false);
+        }
+        return false;
+    });
+    signal_focus_in_event().connect([this](GdkEventFocus *) -> bool {
+        if (m_capture_keyboard->get_active()) {
+            set_keyboard_grab(true);
+            set_pointer_grab(true);
+        }
+        return false;
+    });
 }
 
 bool Vnc::DisplayWindow::open_fd(int fd)
@@ -738,6 +755,7 @@ void Vnc::DisplayWindow::set_capture_keyboard(bool enable)
         disable_modifiers();
     else
         enable_modifiers();
+    set_keyboard_grab(enable);
     m_capture_keyboard->set_active(enable);
 }
 

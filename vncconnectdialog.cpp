@@ -173,7 +173,6 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     if (!vnc.open_host(hostname, port))
         return false;
 
-    vnc.set_keyboard_grab(true);
     vnc.set_pointer_grab(true);
     vnc.set_pointer_local(true);
 
