@@ -197,7 +197,9 @@ void AppSettings::add_cycle_string_list(const std::string &key,
     std::unordered_set<std::string> seen;
     std::vector<Glib::ustring> out_values;
     out_values.reserve(old_values.size() + 1);
+
     out_values.emplace_back(value);
+    seen.emplace(value);
     for (const auto &ov : old_values) {
         if (seen.find(ov) == seen.end()) {
             out_values.emplace_back(ov);
