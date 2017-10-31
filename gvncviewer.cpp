@@ -17,9 +17,11 @@
 #include "vncdisplaymm.h"
 #include "vncconnectdialog.h"
 
+#include <glibmm/miscutils.h>
 #include <gtkmm/main.h>
 #include <gtkmm/messagedialog.h>
 #include <libssh/callbacks.h>
+#include <fcntl.h>
 #include <iostream>
 
 static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
@@ -57,6 +59,16 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
 
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32
+    /* Redirect console output to a file on Windows, since it would otherwise
+     * be hidden from the user */
+    auto log_dir = Glib::build_filename(Glib::get_user_config_dir(), "gsshvnc");
+    g_mkdir_with_parents(log_dir.c_str(), 0700);
+
+    freopen(Glib::build_filename(log_dir, "debug.out").c_str(), "w", stdout);
+    freopen(Glib::build_filename(log_dir, "debug.err").c_str(), "w", stderr);
+#endif
+
     // Tell libssh that we intend to use pthread-based threading
     ssh_threads_set_callbacks(ssh_threads_get_pthread());
     ssh_init();
