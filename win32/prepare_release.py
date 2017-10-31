@@ -17,7 +17,7 @@ staging_dir = '/tmp/gsshvnc-staging'
 
 # Packages required to run gsshvnc
 deploy_packages=[
-    #'adwaita-icon-theme',
+    'adwaita-icon-theme',
     'atk',
     'atkmm',
     'bzip2',
