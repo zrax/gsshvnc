@@ -16,6 +16,7 @@
 
 #include "vncconnectdialog.h"
 #include "vncdisplaymm.h"
+#include "appsettings.h"
 
 #include <glibmm/miscutils.h>
 #include <gtkmm/box.h>
@@ -27,6 +28,8 @@
 Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     : Gtk::Dialog("Connect", parent, Gtk::DIALOG_MODAL | Gtk::DIALOG_DESTROY_WITH_PARENT)
 {
+    AppSettings settings;
+
     add_button("_Cancel", Gtk::RESPONSE_CANCEL);
     add_button("Co_nnect", Gtk::RESPONSE_OK);
     set_default_response(Gtk::RESPONSE_OK);
@@ -43,10 +46,14 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     auto linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
     label = Gtk::manage(new Gtk::Label("VNC _Host:", true));
-    m_host = Gtk::manage(new Gtk::Entry);
-    m_host->set_alignment(Gtk::ALIGN_FILL);
-    m_host->set_placeholder_text("hostname[:display]");
-    m_host->set_activates_default(true);
+    m_host = Gtk::manage(new Gtk::ComboBoxText(true));
+    m_host->get_entry()->set_placeholder_text("hostname[:display]");
+    m_host->get_entry()->set_activates_default(true);
+    for (const auto &host : settings.get_recent_hosts()) {
+        m_host->append(host);
+        if (m_host->get_active_text().empty())
+            m_host->set_active_text(host);
+    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_host);
@@ -62,10 +69,14 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
     label = Gtk::manage(new Gtk::Label("_SSH Host:", true));
-    m_ssh_host = Gtk::manage(new Gtk::Entry);
-    m_ssh_host->set_alignment(Gtk::ALIGN_FILL);
-    m_ssh_host->set_placeholder_text("hostname[:port]");
-    m_ssh_host->set_activates_default(true);
+    m_ssh_host = Gtk::manage(new Gtk::ComboBoxText(true));
+    m_ssh_host->get_entry()->set_placeholder_text("hostname[:port]");
+    m_ssh_host->get_entry()->set_activates_default(true);
+    for (const auto &host : settings.get_recent_ssh_hosts()) {
+        m_ssh_host->append(host);
+        if (m_ssh_host->get_active_text().empty())
+            m_ssh_host->set_active_text(host);
+    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_host);
@@ -74,10 +85,14 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
     label = Gtk::manage(new Gtk::Label("SSH _User:", true));
-    m_ssh_user = Gtk::manage(new Gtk::Entry);
-    m_ssh_user->set_alignment(Gtk::ALIGN_FILL);
-    m_ssh_user->set_placeholder_text(Glib::get_user_name());
-    m_ssh_user->set_activates_default(true);
+    m_ssh_user = Gtk::manage(new Gtk::ComboBoxText(true));
+    m_ssh_user->get_entry()->set_placeholder_text(Glib::get_user_name());
+    m_ssh_user->get_entry()->set_activates_default(true);
+    for (const auto &user : settings.get_recent_ssh_users()) {
+        m_ssh_user->append(user);
+        if (m_ssh_user->get_active_text().empty())
+            m_ssh_user->set_active_text(user);
+    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_user);
@@ -92,7 +107,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     m_lossy_compression = Gtk::manage(new Gtk::CheckButton("Use Lossy (_JPEG) Compression", true));
     m_lossy_compression->set_margin_left(15);
-    m_lossy_compression->set_active(true);
+    m_lossy_compression->set_active(settings.get_lossy_compression());
 
     box->add(*m_lossy_compression);
 
@@ -106,7 +121,8 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_MEDIUM), "High Color (16 bits)");
     m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_LOW), "Low Color (8 bits)");
     m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_ULTRA_LOW), "Ultra Low Color (3 bits)");
-    m_color_depth->set_active(0);
+    if (!m_color_depth->set_active_id(settings.get_color_depth()))
+        m_color_depth->set_active(0);
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_color_depth, Gtk::PACK_SHRINK);
@@ -122,7 +138,7 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     vnc.set_depth((VncDisplayDepthColor)std::stoi(m_color_depth->get_active_id()));
     vnc.set_lossy_encoding(m_lossy_compression->get_active());
 
-    Glib::ustring hostname = m_host->get_text();
+    Glib::ustring hostname = m_host->get_active_text();
     Glib::ustring port;
 
     auto ppos = hostname.find(':');
@@ -140,9 +156,9 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     if (hostname.empty())
         hostname = "127.0.0.1";
 
-    Glib::ustring ssh_string = m_ssh_host->get_text();
+    auto ssh_string = m_ssh_host->get_active_text();
     if (!ssh_string.empty()) {
-        auto username = m_ssh_user->get_text();
+        auto username = m_ssh_user->get_active_text();
         if (username.empty())
             username = Glib::get_user_name();
         if (!tunnel.connect(ssh_string, username))
@@ -160,10 +176,24 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     vnc.set_keyboard_grab(true);
     vnc.set_pointer_grab(true);
     vnc.set_pointer_local(true);
-    vnc.set_grab_keyboard(true);
 
-    if (!vnc.is_composited())
-        vnc.set_scaling(true);
+    AppSettings settings;
+    vnc.set_capture_keyboard(settings.get_capture_keyboard());
+    vnc.set_scaling(settings.get_scaled_display());
+    vnc.set_smoothing(settings.get_smooth_scaling());
+
+    // Save settings if the configuration was successful
+    auto form_text = m_host->get_active_text();
+    if (!form_text.empty())
+        settings.add_recent_host(form_text);
+    form_text = m_ssh_host->get_active_text();
+    if (!form_text.empty())
+        settings.add_recent_ssh_host(form_text);
+    form_text = m_ssh_user->get_active_text();
+    if (!form_text.empty())
+        settings.add_recent_ssh_user(form_text);
+    settings.set_lossy_compression(m_lossy_compression->get_active());
+    settings.set_color_depth(m_color_depth->get_active_id());
 
     return true;
 }

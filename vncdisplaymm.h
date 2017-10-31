@@ -117,8 +117,8 @@ public:
     Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_server_cut_text();
     Glib::SignalProxy0<void> signal_vnc_bell();
 
-    void set_grab_keyboard(bool enable=true);
-    bool get_grab_keyboard();
+    void set_capture_keyboard(bool enable=true);
+    bool get_capture_keyboard();
 
 private:
     Gtk::Widget *m_vnc;

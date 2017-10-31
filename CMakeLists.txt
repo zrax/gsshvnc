@@ -49,6 +49,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 set(gsshvnc_HEADERS
+    appsettings.h
     sshtunnel.h
     vncconnectdialog.h
     vncdisplaymm.h
@@ -57,6 +58,7 @@ set(gsshvnc_HEADERS
 
 set(gsshvnc_SOURCES
     gvncviewer.cpp
+    appsettings.cpp
     sshtunnel.cpp
     vncconnectdialog.cpp
     vncdisplaymm.cpp

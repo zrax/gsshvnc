@@ -15,6 +15,7 @@
  */
 
 #include "vncdisplaymm.h"
+#include "appsettings.h"
 
 #include <glibmm/exceptionhandler.h>
 #include <glibmm/main.h>
@@ -57,7 +58,7 @@ Vnc::DisplayWindow::DisplayWindow()
 
     auto submenu = Gtk::manage(new Gtk::Menu);
 
-    m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture _Keyboard", true));
+    m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture _Keyboard Shortcuts", true));
     auto send_cad = Gtk::manage(new Gtk::MenuItem("Send Ctrl+Alt+_Del", true));
     auto screenshot = Gtk::manage(new Gtk::MenuItem("Take _Screenshot", true));
     auto appquit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
@@ -188,10 +189,14 @@ Vnc::DisplayWindow::DisplayWindow()
     });
 
     m_capture_keyboard->signal_activate().connect([this]() {
-        if (m_capture_keyboard->get_active())
+        bool enable = m_capture_keyboard->get_active();
+        if (enable)
             disable_modifiers();
         else
             enable_modifiers();
+
+        AppSettings settings;
+        settings.set_capture_keyboard(enable);
     });
     send_cad->signal_activate().connect([this]() {
         send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_Delete });
@@ -207,11 +212,19 @@ Vnc::DisplayWindow::DisplayWindow()
             unfullscreen();
     });
     m_scaling->signal_toggled().connect([this]() {
-        on_set_scaling(m_scaling->get_active());
+        bool enable = m_scaling->get_active();
+        on_set_scaling(enable);
+
+        AppSettings settings;
+        settings.set_scaled_display(enable);
     });
 #ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     m_smoothing->signal_toggled().connect([this]() {
-        on_set_smoothing(m_smoothing->get_active());
+        bool enable = m_smoothing->get_active();
+        on_set_smoothing(enable);
+
+        AppSettings settings;
+        settings.set_smooth_scaling(enable);
     });
 #endif
 }
@@ -719,7 +732,7 @@ Glib::SignalProxy0<void> Vnc::DisplayWindow::signal_vnc_bell()
     return {m_vnc, &VncDisplay_signal_vnc_bell};
 }
 
-void Vnc::DisplayWindow::set_grab_keyboard(bool enable)
+void Vnc::DisplayWindow::set_capture_keyboard(bool enable)
 {
     if (enable)
         disable_modifiers();
@@ -728,7 +741,7 @@ void Vnc::DisplayWindow::set_grab_keyboard(bool enable)
     m_capture_keyboard->set_active(enable);
 }
 
-bool Vnc::DisplayWindow::get_grab_keyboard()
+bool Vnc::DisplayWindow::get_capture_keyboard()
 {
     return m_capture_keyboard->get_active();
 }
