@@ -1,10 +1,12 @@
 bin/
 etc/
+include/
 lib/
 libexec/
 sbin/
 share/
 ssl/
+var/
 /filelist.iss
 /COPYING
 /*.exe
