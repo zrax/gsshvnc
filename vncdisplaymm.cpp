@@ -42,6 +42,8 @@
 Vnc::DisplayWindow::DisplayWindow()
     : m_connected(false), m_accel_enabled(true), m_enable_mnemonics()
 {
+    set_default_icon_name("preferences-desktop-remote-desktop");
+
     m_vnc = Glib::wrap(vnc_display_new());
 
     auto layout = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0));
