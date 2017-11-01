@@ -28,11 +28,6 @@ if(NOT GTK_VNC_VERSION VERSION_LESS "0.7.0")
     add_definitions(-DGTK_VNC_HAVE_SMOOTH_SCALING)
 endif()
 
-if(WIN32 AND "${GTKMM_VERSION}" VERSION_GREATER "3.21")
-    # See https://bugzilla.gnome.org/show_bug.cgi?id=781814
-    add_definitions(-DCB_REQUEST_TEXT_IS_BROKEN)
-endif()
-
 include_directories(${GTK_VNC_INCLUDE_DIRS} ${GVNC_INCLUDE_DIRS})
 include_directories(${GTKMM_INCLUDE_DIRS})
 

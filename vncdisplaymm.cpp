@@ -977,8 +977,7 @@ void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selec
         }
     } else if (text != m_clipboard_text) {
         try {
-            auto utf8_text = Glib::locale_to_utf8(text);
-            text = Glib::convert_with_fallback(utf8_text, "iso8859-1//TRANSLIT", "utf-8");
+            text = Glib::convert_with_fallback(text, "iso8859-1//TRANSLIT", "utf-8");
         } catch (Glib::ConvertError &err) {
             /* Keep text in its original format */
         }
@@ -989,15 +988,12 @@ void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selec
 void Vnc::DisplayWindow::remote_clipboard_text(const std::string &text)
 {
     auto clipboard = Gtk::Clipboard::get();
+    if (m_clipboard_text == text)
+        return;
 
-    m_clipboard_text = text;
-    Glib::ustring utf8_text;
-    try {
-        (void)Glib::locale_from_utf8(text);
-        utf8_text = text;
-    } catch (Glib::ConvertError &err) {
-        utf8_text = Glib::convert(text, "utf-8", "iso8859-1");
-    }
+    Glib::ustring utf8_text = Glib::convert_with_fallback(text, "utf-8", "iso8859-1");
     clipboard->set_text(utf8_text);
     clipboard->store();
+
+    m_clipboard_text = utf8_text;
 }
