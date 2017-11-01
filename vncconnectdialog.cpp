@@ -39,17 +39,19 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     box->set_border_width(8);
 
     auto label = Gtk::manage(new Gtk::Label);
-    label->set_markup("<b>Connection Details</b>");
+    label->set_markup("<b>VNC Options</b>");
     label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
 
     box->add(*label);
 
     auto linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("VNC _Host:", true));
+    label = Gtk::manage(new Gtk::Label("VNC _Server:", true));
     m_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_host->get_entry()->set_placeholder_text("hostname[:display]");
     m_host->get_entry()->set_activates_default(true);
+    label->set_mnemonic_widget(*m_host);
+
     auto recent_hosts = settings.get_recent_hosts();
     for (const auto &host : recent_hosts)
         m_host->append(host);
@@ -60,12 +62,37 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     linebox->pack_start(*m_host);
     box->add(*linebox);
 
+    linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
+    linebox->set_margin_left(15);
+    label = Gtk::manage(new Gtk::Label("Color _Depth:", true));
+    label->set_alignment(Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
+    m_color_depth = Gtk::manage(new Gtk::ComboBoxText);
+    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_DEFAULT), "Use Server's Setting");
+    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_FULL), "True Color (24 bits)");
+    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_MEDIUM), "High Color (16 bits)");
+    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_LOW), "Low Color (8 bits)");
+    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_ULTRA_LOW), "Ultra Low Color (3 bits)");
+    if (!m_color_depth->set_active_id(settings.get_color_depth()))
+        m_color_depth->set_active(0);
+    label->set_mnemonic_widget(*m_color_depth);
+
+    linebox->pack_start(*label, Gtk::PACK_SHRINK);
+    linebox->pack_start(*m_color_depth, Gtk::PACK_SHRINK);
+    box->add(*linebox);
+
+    m_lossy_compression = Gtk::manage(new Gtk::CheckButton("Use Lossy (_JPEG) Compression", true));
+    m_lossy_compression->set_margin_left(15);
+    m_lossy_compression->set_active(settings.get_lossy_compression());
+
+    box->add(*m_lossy_compression);
+
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 10));
-    linebox->set_margin_top(10);
+    linebox->set_margin_top(20);
     label = Gtk::manage(new Gtk::Label);
-    label->set_markup("<b>SSH Tunnel</b>");
+    label->set_markup_with_mnemonic("<b>SSH _Tunnel</b>");
     m_ssh_tunnel = Gtk::manage(new Gtk::Switch);
     m_ssh_tunnel->set_active(true);
+    label->set_mnemonic_widget(*m_ssh_tunnel);
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_end(*m_ssh_tunnel, Gtk::PACK_SHRINK);
@@ -73,10 +100,12 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    m_ssh_detail_labels[0] = Gtk::manage(new Gtk::Label("_SSH Host:", true));
+    m_ssh_detail_labels[0] = Gtk::manage(new Gtk::Label("_Host:", true));
     m_ssh_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_host->get_entry()->set_placeholder_text("hostname[:port]");
     m_ssh_host->get_entry()->set_activates_default(true);
+    m_ssh_detail_labels[0]->set_mnemonic_widget(*m_ssh_host);
+
     auto recent_ssh_hosts = settings.get_recent_ssh_hosts();
     for (const auto &host : recent_ssh_hosts)
         m_ssh_host->append(host);
@@ -89,10 +118,12 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    m_ssh_detail_labels[1] = Gtk::manage(new Gtk::Label("SSH _User:", true));
+    m_ssh_detail_labels[1] = Gtk::manage(new Gtk::Label("_User:", true));
     m_ssh_user = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_user->get_entry()->set_placeholder_text(Glib::get_user_name());
     m_ssh_user->get_entry()->set_activates_default(true);
+    m_ssh_detail_labels[1]->set_mnemonic_widget(*m_ssh_user);
+
     auto recent_ssh_users = settings.get_recent_ssh_users();
     for (const auto &host : recent_ssh_users)
         m_ssh_user->append(host);
@@ -101,36 +132,6 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     linebox->pack_start(*m_ssh_detail_labels[1], Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_user);
-    box->add(*linebox);
-
-    label = Gtk::manage(new Gtk::Label);
-    label->set_markup("<b>VNC Options</b>");
-    label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-    label->set_margin_top(10);
-
-    box->add(*label);
-
-    m_lossy_compression = Gtk::manage(new Gtk::CheckButton("Use Lossy (_JPEG) Compression", true));
-    m_lossy_compression->set_margin_left(15);
-    m_lossy_compression->set_active(settings.get_lossy_compression());
-
-    box->add(*m_lossy_compression);
-
-    linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
-    linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("_Color Depth:", true));
-    label->set_alignment(Gtk::ALIGN_FILL, Gtk::ALIGN_CENTER);
-    m_color_depth = Gtk::manage(new Gtk::ComboBoxText);
-    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_DEFAULT), "Use Server's Setting");
-    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_FULL), "True Color (24 bits)");
-    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_MEDIUM), "High Color (16 bits)");
-    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_LOW), "Low Color (8 bits)");
-    m_color_depth->append(std::to_string(VNC_DISPLAY_DEPTH_COLOR_ULTRA_LOW), "Ultra Low Color (3 bits)");
-    if (!m_color_depth->set_active_id(settings.get_color_depth()))
-        m_color_depth->set_active(0);
-
-    linebox->pack_start(*label, Gtk::PACK_SHRINK);
-    linebox->pack_start(*m_color_depth, Gtk::PACK_SHRINK);
     box->add(*linebox);
 
     auto vbox = get_child();
