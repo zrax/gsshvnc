@@ -139,7 +139,7 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     // Gtkmm's signal_state_set is broken and will never fire :(
     g_signal_connect(m_ssh_tunnel->gobj(), "state-set",
-                     G_CALLBACK(Vnc::ConnectDialog::ssh_switch_activate), this);
+                     G_CALLBACK(&Vnc::ConnectDialog::ssh_switch_activate), this);
     m_ssh_tunnel->set_active(settings.get_enable_tunnel());
 }
 

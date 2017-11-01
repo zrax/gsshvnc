@@ -19,6 +19,7 @@
 
 #include <glibmm/exceptionhandler.h>
 #include <glibmm/main.h>
+#include <glibmm/convert.h>
 #include <gtkmm/main.h>
 #include <gtkmm/box.h>
 #include <gtkmm/grid.h>
@@ -147,47 +148,11 @@ Vnc::DisplayWindow::DisplayWindow()
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
     signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
 
-    signal_vnc_server_cut_text().connect([this](const Glib::ustring &text) {
-        auto clipboard = Gtk::Clipboard::get();
-        m_clipboard_text = text;
-        clipboard->set_text(text);
-        clipboard->store();
-    });
-    Gtk::Clipboard::get()->signal_owner_change().connect([this](GdkEventOwnerChange *) {
-        auto clipboard = Gtk::Clipboard::get();
-        Glib::ustring text;
-#ifdef CB_REQUEST_TEXT_IS_BROKEN
-        auto loop = Glib::MainLoop::create(true);
-        std::function<void (const Gtk::SelectionData &)> text_received;
-        text_received = [&text, clipboard, loop, &text_received]
-                        (const Gtk::SelectionData &selection_data) {
-            /* Based on gtk_clipboard_request_text prior to patch that breaks
-               Windows clipboard support */
-            auto result = selection_data.get_text();
-            if (result.empty()) {
-                auto target = selection_data.get_target();
-                if (target == "UTF8_STRING") {
-                    clipboard->request_contents("COMPOUND_TEXT", text_received);
-                    return;
-                } else if (target == "COMPOUND_TEXT") {
-                    clipboard->request_contents("STRING", text_received);
-                    return;
-                }
-            }
-            text = result;
-            loop->quit();
-        };
-        clipboard->request_contents("UTF8_STRING", text_received);
-        if (loop->is_running()) {
-            gdk_threads_leave();
-            loop->run();
-            gdk_threads_enter();
-        }
-#else
-        text = clipboard->wait_for_text();
-#endif
-        if (!text.empty() && text != m_clipboard_text)
-            client_cut_text(text);
+    auto clipboard = Gtk::Clipboard::get();
+    signal_vnc_server_cut_text().connect(sigc::mem_fun(this, &DisplayWindow::remote_clipboard_text));
+    clipboard->signal_owner_change().connect([this, clipboard](GdkEventOwnerChange *) {
+        clipboard->request_contents("UTF8_STRING",
+                        sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
     });
 
     m_capture_keyboard->signal_activate().connect([this]() {
@@ -372,7 +337,7 @@ Glib::ustring Vnc::DisplayWindow::get_name()
     return vnc_display_get_name(get_vnc());
 }
 
-void Vnc::DisplayWindow::client_cut_text(const Glib::ustring &text)
+void Vnc::DisplayWindow::client_cut_text(const std::string &text)
 {
     vnc_display_client_cut_text(get_vnc(), text.c_str());
 }
@@ -715,12 +680,12 @@ static void VncDisplay_signal_vnc_server_cut_text_callback(GtkWidget *self,
                                                            const gchar *text,
                                                            void *data)
 {
-    using SlotType = sigc::slot<void, const Glib::ustring &>;
+    using SlotType = sigc::slot<void, const std::string &>;
     auto obj = dynamic_cast<Gtk::Widget *>(Glib::ObjectBase::_get_current_wrapper((GObject *)self));
     if (obj) {
         try {
             if (const auto slot = Glib::SignalProxyNormal::data_to_slot(data))
-                (*static_cast<SlotType *>(slot))(text ? Glib::ustring(text) : Glib::ustring());
+                (*static_cast<SlotType *>(slot))(text ? std::string(text) : std::string());
         } catch (...) {
             Glib::exception_handlers_invoke();
         }
@@ -734,7 +699,7 @@ static const Glib::SignalProxyInfo VncDisplay_signal_vnc_server_cut_text =
     (GCallback) &VncDisplay_signal_vnc_server_cut_text_callback
 };
 
-Glib::SignalProxy1<void, const Glib::ustring &> Vnc::DisplayWindow::signal_vnc_server_cut_text()
+Glib::SignalProxy1<void, const std::string &> Vnc::DisplayWindow::signal_vnc_server_cut_text()
 {
     return {m_vnc, &VncDisplay_signal_vnc_server_cut_text};
 }
@@ -986,4 +951,53 @@ void Vnc::DisplayWindow::enable_modifiers()
     settings->property_gtk_enable_mnemonics().set_value(m_enable_mnemonics);
 
     m_accel_enabled = true;
+}
+
+void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selection_data)
+{
+    auto clipboard = Gtk::Clipboard::get();
+
+    /* Based on gtk_clipboard_request_text */
+    auto target = selection_data.get_target();
+    auto text = selection_data.get_data_as_string();
+
+    if (text.empty()) {
+        if (target == "UTF8_STRING") {
+            clipboard->request_contents("COMPOUND_TEXT",
+                            sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
+            return;
+        } else if (target == "COMPOUND_TEXT") {
+            clipboard->request_contents("STRING",
+                            sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
+            return;
+        } else if (target == "STRING") {
+            clipboard->request_contents("text/plain;charset=utf-8",
+                            sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
+            return;
+        }
+    } else if (text != m_clipboard_text) {
+        try {
+            auto utf8_text = Glib::locale_to_utf8(text);
+            text = Glib::convert_with_fallback(utf8_text, "iso8859-1//TRANSLIT", "utf-8");
+        } catch (Glib::ConvertError &err) {
+            /* Keep text in its original format */
+        }
+        client_cut_text(text);
+    }
+}
+
+void Vnc::DisplayWindow::remote_clipboard_text(const std::string &text)
+{
+    auto clipboard = Gtk::Clipboard::get();
+
+    m_clipboard_text = text;
+    Glib::ustring utf8_text;
+    try {
+        (void)Glib::locale_from_utf8(text);
+        utf8_text = text;
+    } catch (Glib::ConvertError &err) {
+        utf8_text = Glib::convert(text, "utf-8", "iso8859-1");
+    }
+    clipboard->set_text(utf8_text);
+    clipboard->store();
 }

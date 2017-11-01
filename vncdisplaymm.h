@@ -73,7 +73,7 @@ public:
     int get_height();
     Glib::ustring get_name();
 
-    void client_cut_text(const Glib::ustring &text);
+    void client_cut_text(const std::string &text);
 
     void set_lossy_encoding(bool enable=true);
     bool get_lossy_encoding();
@@ -114,7 +114,7 @@ public:
     Glib::SignalProxy2<void, gint, gint> signal_vnc_desktop_resize();
     Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_auth_failure();
     Glib::SignalProxy1<void, guint> signal_vnc_auth_unsupported();
-    Glib::SignalProxy1<void, const Glib::ustring &> signal_vnc_server_cut_text();
+    Glib::SignalProxy1<void, const std::string &> signal_vnc_server_cut_text();
     Glib::SignalProxy0<void> signal_vnc_bell();
 
     void set_capture_keyboard(bool enable=true);
@@ -137,7 +137,7 @@ private:
 
     void *m_pulse_ifc;
 
-    Glib::ustring m_clipboard_text;
+    std::string m_clipboard_text;
 
     void vnc_screenshot();
     void vnc_initialized();
@@ -147,6 +147,9 @@ private:
     void on_set_smoothing(bool enable=true);
     void disable_modifiers();
     void enable_modifiers();
+
+    void clipboard_text_received(const Gtk::SelectionData &selection_data);
+    void remote_clipboard_text(const std::string &text);
 };
 
 }
