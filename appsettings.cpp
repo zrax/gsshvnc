@@ -34,6 +34,7 @@ AppSettings::AppSettings()
     read_setting(config_file, "ConnectionDialog", "RecentHosts");
     read_setting(config_file, "ConnectionDialog", "RecentSshHosts");
     read_setting(config_file, "ConnectionDialog", "RecentSshUsers");
+    read_setting(config_file, "ConnectionDialog", "EnableSshTunnel", "false");
     read_setting(config_file, "ConnectionDialog", "LossyCompression", "true");
     read_setting(config_file, "ConnectionDialog", "ColorDepth",
                  std::to_string(VNC_DISPLAY_DEPTH_COLOR_DEFAULT));
@@ -96,6 +97,16 @@ std::vector<Glib::ustring> AppSettings::get_recent_ssh_users() const
 void AppSettings::add_recent_ssh_user(const Glib::ustring &user)
 {
     add_cycle_string_list("ConnectionDialog/RecentSshUsers", user);
+}
+
+bool AppSettings::get_enable_tunnel() const
+{
+    return get_bool("ConnectionDialog/EnableSshTunnel");
+}
+
+void AppSettings::set_enable_tunnel(bool enable)
+{
+    set_bool("ConnectionDialog/EnableSshTunnel", enable);
 }
 
 bool AppSettings::get_lossy_compression() const

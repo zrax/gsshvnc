@@ -26,6 +26,8 @@ namespace Gtk
 
 class CheckButton;
 class ComboBoxText;
+class Label;
+class Switch;
 
 }
 
@@ -43,10 +45,14 @@ public:
 
 private:
     Gtk::ComboBoxText *m_host;
+    Gtk::Switch *m_ssh_tunnel;
+    Gtk::Label *m_ssh_detail_labels[2];
     Gtk::ComboBoxText *m_ssh_host;
     Gtk::ComboBoxText *m_ssh_user;
     Gtk::CheckButton *m_lossy_compression;
     Gtk::ComboBoxText *m_color_depth;
+
+    static gboolean ssh_switch_activate(GtkSwitch *, gboolean, gpointer);
 };
 
 }

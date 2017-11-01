@@ -44,6 +44,9 @@ public:
     std::vector<Glib::ustring> get_recent_ssh_users() const;
     void add_recent_ssh_user(const Glib::ustring &user);
 
+    bool get_enable_tunnel() const;
+    void set_enable_tunnel(bool enable);
+
     bool get_lossy_compression() const;
     void set_lossy_compression(bool enable);
 

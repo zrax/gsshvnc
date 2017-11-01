@@ -24,6 +24,7 @@
 #include <gtkmm/entry.h>
 #include <gtkmm/checkbutton.h>
 #include <gtkmm/comboboxtext.h>
+#include <gtkmm/switch.h>
 
 Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     : Gtk::Dialog("Connect", parent, Gtk::DIALOG_MODAL | Gtk::DIALOG_DESTROY_WITH_PARENT)
@@ -49,43 +50,56 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_host->get_entry()->set_placeholder_text("hostname[:display]");
     m_host->get_entry()->set_activates_default(true);
-    for (const auto &host : settings.get_recent_hosts())
+    auto recent_hosts = settings.get_recent_hosts();
+    for (const auto &host : recent_hosts)
         m_host->append(host);
+    if (!recent_hosts.empty())
+        m_host->set_active_text(recent_hosts.front());
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_host);
     box->add(*linebox);
 
+    linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 10));
+    linebox->set_margin_top(10);
     label = Gtk::manage(new Gtk::Label);
     label->set_markup("<b>SSH Tunnel</b>");
-    label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
-    label->set_margin_top(10);
+    m_ssh_tunnel = Gtk::manage(new Gtk::Switch);
+    m_ssh_tunnel->set_active(true);
 
-    box->add(*label);
+    linebox->pack_start(*label, Gtk::PACK_SHRINK);
+    linebox->pack_end(*m_ssh_tunnel, Gtk::PACK_SHRINK);
+    box->add(*linebox);
 
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("_SSH Host:", true));
+    m_ssh_detail_labels[0] = Gtk::manage(new Gtk::Label("_SSH Host:", true));
     m_ssh_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_host->get_entry()->set_placeholder_text("hostname[:port]");
     m_ssh_host->get_entry()->set_activates_default(true);
-    for (const auto &host : settings.get_recent_ssh_hosts())
+    auto recent_ssh_hosts = settings.get_recent_ssh_hosts();
+    for (const auto &host : recent_ssh_hosts)
         m_ssh_host->append(host);
+    if (!recent_ssh_hosts.empty())
+        m_ssh_host->set_active_text(recent_ssh_hosts.front());
 
-    linebox->pack_start(*label, Gtk::PACK_SHRINK);
+    linebox->pack_start(*m_ssh_detail_labels[0], Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_host);
     box->add(*linebox);
 
     linebox = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 5));
     linebox->set_margin_left(15);
-    label = Gtk::manage(new Gtk::Label("SSH _User:", true));
+    m_ssh_detail_labels[1] = Gtk::manage(new Gtk::Label("SSH _User:", true));
     m_ssh_user = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_user->get_entry()->set_placeholder_text(Glib::get_user_name());
     m_ssh_user->get_entry()->set_activates_default(true);
-    for (const auto &user : settings.get_recent_ssh_users())
-        m_ssh_user->append(user);
+    auto recent_ssh_users = settings.get_recent_ssh_users();
+    for (const auto &host : recent_ssh_users)
+        m_ssh_user->append(host);
+    if (!recent_ssh_users.empty())
+        m_ssh_user->set_active_text(recent_ssh_users.front());
 
-    linebox->pack_start(*label, Gtk::PACK_SHRINK);
+    linebox->pack_start(*m_ssh_detail_labels[1], Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_user);
     box->add(*linebox);
 
@@ -121,6 +135,11 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
 
     auto vbox = get_child();
     dynamic_cast<Gtk::Container *>(vbox)->add(*box);
+
+    // Gtkmm's signal_state_set is broken and will never fire :(
+    g_signal_connect(m_ssh_tunnel->gobj(), "state-set",
+                     G_CALLBACK(Vnc::ConnectDialog::ssh_switch_activate), this);
+    m_ssh_tunnel->set_active(settings.get_enable_tunnel());
 }
 
 bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
@@ -147,8 +166,8 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     if (hostname.empty())
         hostname = "127.0.0.1";
 
-    auto ssh_string = m_ssh_host->get_active_text();
-    if (!ssh_string.empty()) {
+    if (m_ssh_tunnel->get_active()) {
+        auto ssh_string = m_ssh_host->get_active_text();
         auto username = m_ssh_user->get_active_text();
         if (username.empty())
             username = Glib::get_user_name();
@@ -182,8 +201,23 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     form_text = m_ssh_user->get_active_text();
     if (!form_text.empty())
         settings.add_recent_ssh_user(form_text);
+    settings.set_enable_tunnel(m_ssh_tunnel->get_active());
     settings.set_lossy_compression(m_lossy_compression->get_active());
     settings.set_color_depth(m_color_depth->get_active_id());
 
     return true;
+}
+
+gboolean Vnc::ConnectDialog::ssh_switch_activate(GtkSwitch *, gboolean active,
+                                                 gpointer user_data)
+{
+    auto self = reinterpret_cast<Vnc::ConnectDialog *>(user_data);
+
+    self->m_ssh_detail_labels[0]->set_sensitive(active);
+    self->m_ssh_host->set_sensitive(active);
+    self->m_ssh_host->get_entry()->set_sensitive(active);
+    self->m_ssh_detail_labels[1]->set_sensitive(active);
+    self->m_ssh_user->set_sensitive(active);
+    self->m_ssh_user->get_entry()->set_sensitive(active);
+    return false;
 }
