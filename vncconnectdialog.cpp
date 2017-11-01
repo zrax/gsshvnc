@@ -49,11 +49,8 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_host->get_entry()->set_placeholder_text("hostname[:display]");
     m_host->get_entry()->set_activates_default(true);
-    for (const auto &host : settings.get_recent_hosts()) {
+    for (const auto &host : settings.get_recent_hosts())
         m_host->append(host);
-        if (m_host->get_active_text().empty())
-            m_host->set_active_text(host);
-    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_host);
@@ -72,11 +69,8 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_ssh_host = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_host->get_entry()->set_placeholder_text("hostname[:port]");
     m_ssh_host->get_entry()->set_activates_default(true);
-    for (const auto &host : settings.get_recent_ssh_hosts()) {
+    for (const auto &host : settings.get_recent_ssh_hosts())
         m_ssh_host->append(host);
-        if (m_ssh_host->get_active_text().empty())
-            m_ssh_host->set_active_text(host);
-    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_host);
@@ -88,11 +82,8 @@ Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
     m_ssh_user = Gtk::manage(new Gtk::ComboBoxText(true));
     m_ssh_user->get_entry()->set_placeholder_text(Glib::get_user_name());
     m_ssh_user->get_entry()->set_activates_default(true);
-    for (const auto &user : settings.get_recent_ssh_users()) {
+    for (const auto &user : settings.get_recent_ssh_users())
         m_ssh_user->append(user);
-        if (m_ssh_user->get_active_text().empty())
-            m_ssh_user->set_active_text(user);
-    }
 
     linebox->pack_start(*label, Gtk::PACK_SHRINK);
     linebox->pack_start(*m_ssh_user);
