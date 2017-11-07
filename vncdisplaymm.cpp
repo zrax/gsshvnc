@@ -199,6 +199,7 @@ Vnc::DisplayWindow::DisplayWindow()
 
     about->signal_activate().connect([this]() {
         Gtk::AboutDialog dialog;
+        dialog.set_transient_for(*this);
         dialog.set_program_name("gsshvnc");
         dialog.set_version("0.90");
         dialog.set_logo_icon_name("preferences-desktop-remote-desktop");
