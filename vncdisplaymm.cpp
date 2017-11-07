@@ -28,6 +28,7 @@
 #include <gtkmm/settings.h>
 #include <gtkmm/filechooserdialog.h>
 #include <gtkmm/messagedialog.h>
+#include <gtkmm/aboutdialog.h>
 #include <iostream>
 #include <ctime>
 
@@ -195,6 +196,20 @@ Vnc::DisplayWindow::DisplayWindow()
         settings.set_smooth_scaling(enable);
     });
 #endif
+
+    about->signal_activate().connect([this]() {
+        Gtk::AboutDialog dialog;
+        dialog.set_program_name("gsshvnc");
+        dialog.set_version("0.1");
+        dialog.set_logo_icon_name("preferences-desktop-remote-desktop");
+        dialog.set_comments("gsshvnc (pronounced \"Gosh VNC\") is a simple VNC "
+                            "client with built-in support for SSH tunneling");
+        dialog.set_authors({"Michael Hansen <zrax0111@gmail.com>"});
+        dialog.set_copyright("Copyright \u00a9 2017 Michael Hansen");
+        dialog.set_license_type(Gtk::LICENSE_GPL_2_0);
+        dialog.set_website("https://github.com/zrax/gsshvnc");
+        (void)dialog.run();
+    });
 
     // Don't capture keyboard when the window doesn't have focus
     signal_focus_out_event().connect([this](GdkEventFocus *) -> bool {
