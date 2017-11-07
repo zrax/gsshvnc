@@ -52,7 +52,7 @@ set(gsshvnc_HEADERS
 )
 
 set(gsshvnc_SOURCES
-    gvncviewer.cpp
+    gsshvnc.cpp
     appsettings.cpp
     sshtunnel.cpp
     vncconnectdialog.cpp
