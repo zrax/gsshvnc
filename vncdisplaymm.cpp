@@ -41,9 +41,17 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+static Vnc::DisplayWindow *s_instance = nullptr;
+
 Vnc::DisplayWindow::DisplayWindow()
     : m_connected(false), m_accel_enabled(true), m_enable_mnemonics()
 {
+    if (s_instance) {
+        std::cerr << "WARNING: Creating multiple Vnc::DisplayWindow instances is not supported"
+                  << std::endl;
+    }
+    s_instance = this;
+
     set_default_icon_name("preferences-desktop-remote-desktop");
 
     m_vnc = Glib::wrap(vnc_display_new());
@@ -227,6 +235,11 @@ Vnc::DisplayWindow::DisplayWindow()
         }
         return false;
     });
+}
+
+Vnc::DisplayWindow::~DisplayWindow()
+{
+    s_instance = nullptr;
 }
 
 bool Vnc::DisplayWindow::open_fd(int fd)
@@ -972,6 +985,9 @@ void Vnc::DisplayWindow::enable_modifiers()
 void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selection_data)
 {
     auto clipboard = Gtk::Clipboard::get();
+    auto clip_owner = clipboard->get_owner();
+    if (clip_owner && clip_owner->gobj() == G_OBJECT(gobj()))
+        return;
 
     /* Based on gtk_clipboard_request_text */
     auto target = selection_data.get_target();
@@ -991,25 +1007,56 @@ void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selec
                             sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
             return;
         }
-    } else if (text != m_clipboard_text) {
-        try {
-            text = Glib::convert_with_fallback(text, "iso8859-1//TRANSLIT", "utf-8");
-        } catch (Glib::ConvertError &err) {
-            /* Keep text in its original format */
-        }
-        client_cut_text(text);
     }
+
+    try {
+        text = Glib::convert_with_fallback(text, "iso8859-1//TRANSLIT", "utf-8");
+    } catch (Glib::ConvertError &err) {
+        std::cerr << "Warning: " << err.what() << std::endl;
+        return;
+    }
+    client_cut_text(text);
 }
 
 void Vnc::DisplayWindow::remote_clipboard_text(const std::string &text)
 {
-    auto clipboard = Gtk::Clipboard::get();
-    if (m_clipboard_text == text)
+    if (text.empty())
         return;
 
-    Glib::ustring utf8_text = Glib::convert_with_fallback(text, "utf-8", "iso8859-1");
-    clipboard->set_text(utf8_text);
-    clipboard->store();
+    const GtkTargetEntry targets[] = {
+        {const_cast<gchar *>("UTF8_STRING"), 0, 0},
+        {const_cast<gchar *>("COMPOUND_TEXT"), 0, 0},
+        {const_cast<gchar *>("TEXT"), 0, 0},
+        {const_cast<gchar *>("STRING"), 0, 0},
+    };
 
-    m_clipboard_text = utf8_text;
+    try {
+        m_clipboard_text = Glib::convert_with_fallback(text, "utf-8", "iso8859-1");
+    } catch (Glib::ConvertError &err) {
+        m_clipboard_text = std::string();
+    }
+
+    if (!m_clipboard_text.empty()) {
+        auto clipboard = Gtk::Clipboard::get();
+
+        // This isn't wrapped by gtkmm for some reason
+        gtk_clipboard_set_with_owner(clipboard->gobj(),
+                                     targets, G_N_ELEMENTS(targets),
+                                     &DisplayWindow::vnc_copy_handler,
+                                     nullptr,
+                                     G_OBJECT(gobj()));
+    }
+}
+
+void Vnc::DisplayWindow::vnc_copy_handler(GtkClipboard *clipboard,
+                                          GtkSelectionData *data,
+                                          guint info, gpointer owner)
+{
+    (void)clipboard;
+    (void)info;
+
+    if (owner == G_OBJECT(s_instance->gobj())) {
+        gtk_selection_data_set_text(data, s_instance->m_clipboard_text.c_str(),
+                                    s_instance->m_clipboard_text.size());
+    }
 }

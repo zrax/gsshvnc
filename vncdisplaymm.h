@@ -36,6 +36,7 @@ class DisplayWindow : public Gtk::Window
 {
 public:
     DisplayWindow();
+    ~DisplayWindow() override;
 
     bool open_fd(int fd);
     bool open_fd(int fd, const Glib::ustring &hostname);
@@ -150,6 +151,8 @@ private:
 
     void clipboard_text_received(const Gtk::SelectionData &selection_data);
     void remote_clipboard_text(const std::string &text);
+    static void vnc_copy_handler(GtkClipboard *clipboard, GtkSelectionData *data,
+                                 guint info, gpointer owner);
 };
 
 }
