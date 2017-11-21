@@ -1,5 +1,5 @@
 #define MyAppName "gsshvnc"
-#define MyAppVersion "0.90"
+#define MyAppVersion "0.91"
 #define MyAppPublisher "Michael Hansen"
 #define MyAppURL "http://www.github.com/zrax/gsshvnc"
 #define MyAppExeName "gsshvnc.exe"

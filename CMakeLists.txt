@@ -101,3 +101,5 @@ if(WIN32)
     add_dependencies(gsshvnc gsshvnc_icon)
     target_sources(gsshvnc PUBLIC win32/gsshvnc.rc)
 endif()
+
+install(TARGETS gsshvnc RUNTIME DESTINATION bin)
