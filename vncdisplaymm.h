@@ -21,13 +21,24 @@
  * instead of these "fake" wrappers */
 
 #include <gtkmm/window.h>
-#include <gtkmm/menubar.h>
-#include <gtkmm/menu.h>
-#include <gtkmm/checkmenuitem.h>
-#include <giomm/socketaddress.h>
 #include <vncdisplay.h>
 
 #include "vncgrabsequencemm.h"
+
+namespace Gio
+{
+
+class SocketAddress;
+
+}
+
+namespace Gtk
+{
+
+class ScrolledWindow;
+class CheckMenuItem;
+
+}
 
 namespace Vnc
 {
@@ -123,6 +134,7 @@ public:
 
 private:
     Gtk::Widget *m_vnc;
+    Gtk::ScrolledWindow *m_viewport;
     VncDisplay *get_vnc();
     bool m_connected;
 
@@ -148,6 +160,9 @@ private:
     void on_set_smoothing(bool enable=true);
     void disable_modifiers();
     void enable_modifiers();
+
+    struct { int width, height; } m_remote_size;
+    void update_scrolling();
 
     void clipboard_text_received(const Gtk::SelectionData &selection_data);
     void remote_clipboard_text(const std::string &text);

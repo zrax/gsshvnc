@@ -20,10 +20,14 @@
 #include <glibmm/exceptionhandler.h>
 #include <glibmm/main.h>
 #include <glibmm/convert.h>
+#include <giomm/socketaddress.h>
 #include <gtkmm/main.h>
 #include <gtkmm/box.h>
 #include <gtkmm/grid.h>
+#include <gtkmm/scrolledwindow.h>
 #include <gtkmm/entry.h>
+#include <gtkmm/menubar.h>
+#include <gtkmm/checkmenuitem.h>
 #include <gtkmm/separatormenuitem.h>
 #include <gtkmm/settings.h>
 #include <gtkmm/filechooserdialog.h>
@@ -54,7 +58,12 @@ Vnc::DisplayWindow::DisplayWindow()
 
     set_default_icon_name("preferences-desktop-remote-desktop");
 
+    m_remote_size.width = -1;
+    m_remote_size.height = -1;
+
     m_vnc = Glib::wrap(vnc_display_new());
+    m_viewport = Gtk::manage(new Gtk::ScrolledWindow);
+    m_viewport->add(*m_vnc);
 
     auto layout = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0));
     auto menubar = Gtk::manage(new Gtk::MenuBar);
@@ -93,6 +102,7 @@ Vnc::DisplayWindow::DisplayWindow()
     m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
 
     submenu->append(*m_fullscreen);
+    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*m_scaling);
 
 #ifdef GTK_VNC_HAVE_SMOOTH_SCALING
@@ -116,10 +126,11 @@ Vnc::DisplayWindow::DisplayWindow()
     help->set_submenu(*submenu);
 
     layout->pack_start(*menubar, false, true);
-    layout->pack_start(*m_vnc, true, true);
+    layout->pack_start(*m_viewport, true, true);
     add(*layout);
     gtk_widget_realize(m_vnc->gobj());
 
+    // Minimal size in case a fixed size is not later requested
     set_size_request(600, 400);
 
     // Can't find a pre-wrapped C++ version of this anywhere...
@@ -152,6 +163,13 @@ Vnc::DisplayWindow::DisplayWindow()
         Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
         (void)dialog.run();
         Gtk::Main::quit();
+    });
+
+    signal_vnc_desktop_resize().connect([this, menubar](gint width, gint height) {
+        m_remote_size.width = width;
+        m_remote_size.height = height;
+        resize(width, height + menubar->get_height());
+        update_scrolling();
     });
 
     signal_vnc_pointer_grab().connect([this]() { update_title(true); });
@@ -191,6 +209,7 @@ Vnc::DisplayWindow::DisplayWindow()
     m_scaling->signal_toggled().connect([this]() {
         bool enable = m_scaling->get_active();
         on_set_scaling(enable);
+        update_scrolling();
 
         AppSettings settings;
         settings.set_scaled_display(enable);
@@ -391,6 +410,7 @@ bool Vnc::DisplayWindow::set_scaling(bool enable)
 {
     bool result = on_set_scaling(enable);
     m_scaling->set_active(enable);
+    update_scrolling();
     return result;
 }
 
@@ -980,6 +1000,16 @@ void Vnc::DisplayWindow::enable_modifiers()
     settings->property_gtk_enable_mnemonics().set_value(m_enable_mnemonics);
 
     m_accel_enabled = true;
+}
+
+void Vnc::DisplayWindow::update_scrolling()
+{
+    bool enable_scrolling = !m_scaling->get_active();
+    set_force_size(enable_scrolling);
+    if (enable_scrolling)
+        m_vnc->set_size_request(m_remote_size.width, m_remote_size.height);
+    else
+        m_vnc->set_size_request(-1, -1);
 }
 
 void Vnc::DisplayWindow::clipboard_text_received(const Gtk::SelectionData &selection_data)
