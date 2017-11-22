@@ -753,37 +753,12 @@ void Vnc::DisplayWindow::init_vnc()
     signal_vnc_connected().connect([this]() { m_connected = true; });
     signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
     signal_vnc_disconnected().connect([this]() {
-        if (m_connected) {
-            int result = Gtk::RESPONSE_CANCEL;
-            {
-                Gtk::MessageDialog dialog(*this, "VNC Session Disconnected",
-                                          false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_NONE);
-                dialog.add_button("Reconnect", Gtk::RESPONSE_YES);
-                dialog.add_button("Close", Gtk::RESPONSE_CANCEL);
-                dialog.set_default_response(Gtk::RESPONSE_YES);
-                result = dialog.run();
-            }
-            delete m_vnc;
-            m_vnc = nullptr;
-            m_connected = false;
-
-            if (result == Gtk::RESPONSE_YES)
-                m_signal_reconnect.emit();
-            else
-                Gtk::Main::quit();
-        } else {
-            /* This version should only show when gtk-vnc doesn't emit vnc-error */
-            Gtk::MessageDialog dialog(*this, "Could not open VNC connection",
-                                      false, Gtk::MESSAGE_INFO);
-            (void)dialog.run();
-            Gtk::Main::quit();
-        }
+        handle_disconnect("VNC connection lost",
+                          "Could not open VNC connection");
     });
     signal_vnc_error().connect([this](const Glib::ustring &message) {
         auto text = Glib::ustring::compose("VNC Error: %1", message);
-        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
-        (void)dialog.run();
-        Gtk::Main::quit();
+        handle_disconnect(text, text);
     });
     signal_vnc_auth_credential().connect(sigc::mem_fun(this, &DisplayWindow::vnc_credential));
     signal_vnc_auth_failure().connect([this](const Glib::ustring &message) {
@@ -813,6 +788,35 @@ void Vnc::DisplayWindow::init_vnc()
                             sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
         });
         clipboard_connected = true;
+    }
+}
+
+void Vnc::DisplayWindow::handle_disconnect(const Glib::ustring &connected_msg,
+                                           const Glib::ustring &disconnected_msg)
+{
+    if (m_connected) {
+        int result = Gtk::RESPONSE_CANCEL;
+        {
+            Gtk::MessageDialog dialog(*this, connected_msg, false,
+                                      Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
+            dialog.add_button("Reconnect", Gtk::RESPONSE_YES);
+            dialog.add_button("Close", Gtk::RESPONSE_CANCEL);
+            dialog.set_default_response(Gtk::RESPONSE_YES);
+            result = dialog.run();
+        }
+        delete m_vnc;
+        m_vnc = nullptr;
+        m_connected = false;
+
+        if (result == Gtk::RESPONSE_YES)
+            m_signal_reconnect.emit();
+        else
+            Gtk::Main::quit();
+    } else {
+        Gtk::MessageDialog dialog(*this, disconnected_msg, false,
+                                  Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
+        Gtk::Main::quit();
     }
 }
 

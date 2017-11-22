@@ -160,6 +160,8 @@ private:
     std::string m_clipboard_text;
 
     void init_vnc();
+    void handle_disconnect(const Glib::ustring &connected_msg,
+                           const Glib::ustring &disconnected_msg);
 
     void vnc_screenshot();
     void vnc_initialized();
