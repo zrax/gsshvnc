@@ -754,15 +754,23 @@ void Vnc::DisplayWindow::init_vnc()
     signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
     signal_vnc_disconnected().connect([this]() {
         if (m_connected) {
+            int result = Gtk::RESPONSE_CANCEL;
             {
                 Gtk::MessageDialog dialog(*this, "VNC Session Disconnected",
-                                          false, Gtk::MESSAGE_INFO);
-                (void)dialog.run();
+                                          false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_NONE);
+                dialog.add_button("Reconnect", Gtk::RESPONSE_YES);
+                dialog.add_button("Close", Gtk::RESPONSE_CANCEL);
+                dialog.set_default_response(Gtk::RESPONSE_YES);
+                result = dialog.run();
             }
             delete m_vnc;
             m_vnc = nullptr;
             m_connected = false;
-            m_signal_disconnected.emit();
+
+            if (result == Gtk::RESPONSE_YES)
+                m_signal_reconnect.emit();
+            else
+                Gtk::Main::quit();
         } else {
             /* This version should only show when gtk-vnc doesn't emit vnc-error */
             Gtk::MessageDialog dialog(*this, "Could not open VNC connection",

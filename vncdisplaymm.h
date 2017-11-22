@@ -113,7 +113,7 @@ public:
 
     static Glib::OptionGroup &option_group();
 
-    sigc::signal<void> signal_disconnected() const { return m_signal_disconnected; }
+    sigc::signal<void> signal_want_reconnect() const { return m_signal_reconnect; }
 
     void set_capture_keyboard(bool enable=true);
     bool get_capture_keyboard();
@@ -136,8 +136,8 @@ private:
     Glib::SignalProxy1<void, const std::string &> signal_vnc_server_cut_text();
     Glib::SignalProxy0<void> signal_vnc_bell();
 
-    // Emitted when m_vnc emits vnc-disconnected and we had an open connection.
-    sigc::signal<void> m_signal_disconnected;
+    // Emitted when VNC disconnects and the user requests re-connection.
+    sigc::signal<void> m_signal_reconnect;
 
     Gtk::Widget *m_vnc;
     Gtk::ScrolledWindow *m_viewport;
