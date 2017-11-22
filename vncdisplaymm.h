@@ -36,6 +36,7 @@ namespace Gtk
 {
 
 class ScrolledWindow;
+class MenuBar;
 class CheckMenuItem;
 
 }
@@ -112,6 +113,12 @@ public:
 
     static Glib::OptionGroup &option_group();
 
+    sigc::signal<void> signal_disconnected() const { return m_signal_disconnected; }
+
+    void set_capture_keyboard(bool enable=true);
+    bool get_capture_keyboard();
+
+private:
     Glib::SignalProxy0<void> signal_vnc_connected();
     Glib::SignalProxy0<void> signal_vnc_initialized();
     Glib::SignalProxy0<void> signal_vnc_disconnected();
@@ -129,10 +136,9 @@ public:
     Glib::SignalProxy1<void, const std::string &> signal_vnc_server_cut_text();
     Glib::SignalProxy0<void> signal_vnc_bell();
 
-    void set_capture_keyboard(bool enable=true);
-    bool get_capture_keyboard();
+    // Emitted when m_vnc emits vnc-disconnected and we had an open connection.
+    sigc::signal<void> m_signal_disconnected;
 
-private:
     Gtk::Widget *m_vnc;
     Gtk::ScrolledWindow *m_viewport;
     VncDisplay *get_vnc();
@@ -143,6 +149,7 @@ private:
     Glib::ustring m_menu_bar_accel;
     std::vector<Glib::RefPtr<Gtk::AccelGroup>> m_accel_groups;
 
+    Gtk::MenuBar *m_menubar;
     Gtk::CheckMenuItem *m_capture_keyboard;
     Gtk::CheckMenuItem *m_fullscreen;
     Gtk::CheckMenuItem *m_scaling;
@@ -151,6 +158,8 @@ private:
     void *m_pulse_ifc;
 
     std::string m_clipboard_text;
+
+    void init_vnc();
 
     void vnc_screenshot();
     void vnc_initialized();

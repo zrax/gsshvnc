@@ -172,6 +172,7 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
         auto username = m_ssh_user->get_active_text();
         if (username.empty())
             username = Glib::get_user_name();
+        tunnel.disconnect();
         if (!tunnel.connect(ssh_string, username))
             return false;
         guint16 local_port = tunnel.forward_port(hostname, std::stoi(port));

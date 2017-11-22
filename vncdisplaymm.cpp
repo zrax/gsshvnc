@@ -48,7 +48,7 @@
 static Vnc::DisplayWindow *s_instance = nullptr;
 
 Vnc::DisplayWindow::DisplayWindow()
-    : m_connected(false), m_accel_enabled(true), m_enable_mnemonics()
+    : m_vnc(), m_connected(false), m_accel_enabled(true), m_enable_mnemonics()
 {
     if (s_instance) {
         std::cerr << "WARNING: Creating multiple Vnc::DisplayWindow instances is not supported"
@@ -60,13 +60,10 @@ Vnc::DisplayWindow::DisplayWindow()
 
     m_remote_size.width = -1;
     m_remote_size.height = -1;
-
-    m_vnc = Glib::wrap(vnc_display_new());
     m_viewport = Gtk::manage(new Gtk::ScrolledWindow);
-    m_viewport->add(*m_vnc);
 
     auto layout = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0));
-    auto menubar = Gtk::manage(new Gtk::MenuBar);
+    m_menubar = Gtk::manage(new Gtk::MenuBar);
 
 #ifdef HAVE_PULSEAUDIO
     m_pulse_ifc = vnc_audio_pulse_new();
@@ -75,7 +72,7 @@ Vnc::DisplayWindow::DisplayWindow()
     set_resizable(true);
 
     auto remote = Gtk::manage(new Gtk::MenuItem("_Remote", true));
-    menubar->append(*remote);
+    m_menubar->append(*remote);
 
     auto submenu = Gtk::manage(new Gtk::Menu);
 
@@ -94,7 +91,7 @@ Vnc::DisplayWindow::DisplayWindow()
     remote->set_submenu(*submenu);
 
     auto view = Gtk::manage(new Gtk::MenuItem("_View", true));
-    menubar->append(*view);
+    m_menubar->append(*view);
 
     submenu = Gtk::manage(new Gtk::Menu);
 
@@ -116,7 +113,7 @@ Vnc::DisplayWindow::DisplayWindow()
     view->set_submenu(*submenu);
 
     auto help = Gtk::manage(new Gtk::MenuItem("_Help", true));
-    menubar->append(*help);
+    m_menubar->append(*help);
 
     submenu = Gtk::manage(new Gtk::Menu);
 
@@ -125,10 +122,9 @@ Vnc::DisplayWindow::DisplayWindow()
 
     help->set_submenu(*submenu);
 
-    layout->pack_start(*menubar, false, true);
+    layout->pack_start(*m_menubar, false, true);
     layout->pack_start(*m_viewport, true, true);
     add(*layout);
-    gtk_widget_realize(m_vnc->gobj());
 
     // Minimal size in case a fixed size is not later requested
     set_size_request(600, 400);
@@ -139,48 +135,6 @@ Vnc::DisplayWindow::DisplayWindow()
         auto group = Glib::wrap(GTK_ACCEL_GROUP(accels->data), true);
         m_accel_groups.emplace_back(group);
     }
-
-    signal_vnc_connected().connect([this]() { m_connected = true; });
-    signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
-    signal_vnc_disconnected().connect([this]() {
-        if (m_connected) {
-            // TODO: Offer to reconnect when connection lost unexpectedly
-            Gtk::MessageDialog dialog(*this, "VNC Session Disconnected", false, Gtk::MESSAGE_INFO);
-            (void)dialog.run();
-        }
-        m_connected = false;
-        Gtk::Main::quit();
-    });
-    signal_vnc_error().connect([this](const Glib::ustring &message) {
-        auto text = Glib::ustring::compose("VNC Error: %1", message);
-        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
-        (void)dialog.run();
-        Gtk::Main::quit();
-    });
-    signal_vnc_auth_credential().connect(sigc::mem_fun(this, &DisplayWindow::vnc_credential));
-    signal_vnc_auth_failure().connect([this](const Glib::ustring &message) {
-        auto text = Glib::ustring::compose("VNC Authentication failed: %1", message);
-        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
-        (void)dialog.run();
-        Gtk::Main::quit();
-    });
-
-    signal_vnc_desktop_resize().connect([this, menubar](gint width, gint height) {
-        m_remote_size.width = width;
-        m_remote_size.height = height;
-        resize(width, height + menubar->get_height());
-        update_scrolling();
-    });
-
-    signal_vnc_pointer_grab().connect([this]() { update_title(true); });
-    signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
-
-    auto clipboard = Gtk::Clipboard::get();
-    signal_vnc_server_cut_text().connect(sigc::mem_fun(this, &DisplayWindow::remote_clipboard_text));
-    clipboard->signal_owner_change().connect([this, clipboard](GdkEventOwnerChange *) {
-        clipboard->request_contents("UTF8_STRING",
-                        sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
-    });
 
     m_capture_keyboard->signal_activate().connect([this]() {
         bool enable = m_capture_keyboard->get_active();
@@ -782,7 +736,76 @@ bool Vnc::DisplayWindow::get_capture_keyboard()
 
 VncDisplay *Vnc::DisplayWindow::get_vnc()
 {
+    init_vnc();
     return VNC_DISPLAY(m_vnc->gobj());
+}
+
+void Vnc::DisplayWindow::init_vnc()
+{
+    if (m_vnc)
+        return;
+
+    m_vnc = Glib::wrap(vnc_display_new());
+    m_viewport->remove();
+    m_viewport->add(*m_vnc);
+    gtk_widget_realize(m_vnc->gobj());
+
+    signal_vnc_connected().connect([this]() { m_connected = true; });
+    signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
+    signal_vnc_disconnected().connect([this]() {
+        if (m_connected) {
+            {
+                Gtk::MessageDialog dialog(*this, "VNC Session Disconnected",
+                                          false, Gtk::MESSAGE_INFO);
+                (void)dialog.run();
+            }
+            delete m_vnc;
+            m_vnc = nullptr;
+            m_connected = false;
+            m_signal_disconnected.emit();
+        } else {
+            /* This version should only show when gtk-vnc doesn't emit vnc-error */
+            Gtk::MessageDialog dialog(*this, "Could not open VNC connection",
+                                      false, Gtk::MESSAGE_INFO);
+            (void)dialog.run();
+            Gtk::Main::quit();
+        }
+    });
+    signal_vnc_error().connect([this](const Glib::ustring &message) {
+        auto text = Glib::ustring::compose("VNC Error: %1", message);
+        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
+        Gtk::Main::quit();
+    });
+    signal_vnc_auth_credential().connect(sigc::mem_fun(this, &DisplayWindow::vnc_credential));
+    signal_vnc_auth_failure().connect([this](const Glib::ustring &message) {
+        auto text = Glib::ustring::compose("VNC Authentication failed: %1", message);
+        Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
+        (void)dialog.run();
+        Gtk::Main::quit();
+    });
+
+    signal_vnc_desktop_resize().connect([this](gint width, gint height) {
+        m_remote_size.width = width;
+        m_remote_size.height = height;
+        resize(width, height + m_menubar->get_height());
+        update_scrolling();
+    });
+
+    signal_vnc_pointer_grab().connect([this]() { update_title(true); });
+    signal_vnc_pointer_ungrab().connect([this]() { update_title(false); });
+
+    auto clipboard = Gtk::Clipboard::get();
+    signal_vnc_server_cut_text().connect(sigc::mem_fun(this, &DisplayWindow::remote_clipboard_text));
+
+    static bool clipboard_connected = false;
+    if (!clipboard_connected) {
+        clipboard->signal_owner_change().connect([this, clipboard](GdkEventOwnerChange *) {
+            clipboard->request_contents("UTF8_STRING",
+                            sigc::mem_fun(this, &DisplayWindow::clipboard_text_received));
+        });
+        clipboard_connected = true;
+    }
 }
 
 static Glib::ustring gen_screenshot_name(const Glib::ustring &name)
