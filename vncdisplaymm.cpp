@@ -182,7 +182,7 @@ Vnc::DisplayWindow::DisplayWindow()
         Gtk::AboutDialog dialog;
         dialog.set_transient_for(*this);
         dialog.set_program_name("gsshvnc");
-        dialog.set_version("0.91");
+        dialog.set_version(GSSHVNC_VERSION_STR);
         dialog.set_logo_icon_name("preferences-desktop-remote-desktop");
         dialog.set_comments("gsshvnc (pronounced \"Gosh VNC\") is a simple VNC "
                             "client with built-in support for SSH tunneling");

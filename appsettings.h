@@ -22,6 +22,8 @@
 #include <unordered_set>
 #include <glibmm/ustring.h>
 
+#define GSSHVNC_VERSION_STR "0.91"
+
 namespace Glib
 {
 

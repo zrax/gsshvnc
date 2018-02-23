@@ -27,7 +27,8 @@
 #include <gtkmm/switch.h>
 
 Vnc::ConnectDialog::ConnectDialog(Gtk::Window &parent)
-    : Gtk::Dialog("Connect", parent, Gtk::DIALOG_MODAL | Gtk::DIALOG_DESTROY_WITH_PARENT)
+    : Gtk::Dialog("Connect - gsshvnc " GSSHVNC_VERSION_STR, parent,
+                  Gtk::DIALOG_MODAL | Gtk::DIALOG_DESTROY_WITH_PARENT)
 {
     AppSettings settings;
 
