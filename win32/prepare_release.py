@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 ### IMPORTANT:  This script should be run with msys2's python3, not mingw
 ###     or another native Windows python3 interpreter.
@@ -13,7 +13,6 @@ import subprocess
 # The MSYS package and directory prefixes for deployed packages
 pkg_prefix = 'mingw-w64-x86_64'
 msys_prefix = '/mingw64'
-staging_dir = '/tmp/gsshvnc-staging'
 
 # Packages required to run gsshvnc
 deploy_packages=[
@@ -48,6 +47,7 @@ deploy_packages=[
     'libgpg-error',
     'libiconv',
     'libidn2',
+    'libjpeg-turbo',
     'libpng',
     'librsvg',
     'libsigc++',
@@ -80,7 +80,9 @@ clean_patterns=[
     'bin/broadwayd.exe',
     'bin/bunzip2.exe',
     'bin/bz*',
+    'bin/cjpeg.exe',
     'bin/csslint*.exe',
+    'bin/djpeg.exe',
     'bin/dumpsexp.exe',
     'bin/fc-*',
     'bin/gnutls-*.exe',
@@ -89,6 +91,7 @@ clean_patterns=[
     'bin/hb-*.exe',
     'bin/hmac256.exe',
     'bin/idn2.exe',
+    'bin/jpegtran.exe',
     'bin/lzma*.exe',
     'bin/mini*zip.exe',
     'bin/mpicalc.exe',
@@ -96,11 +99,14 @@ clean_patterns=[
     'bin/ocsptool.exe',
     'bin/openssl.exe',
     'bin/pcre*.exe',
+    'bin/rdjpgcom.exe',
     'bin/recode*.exe',
     'bin/rsvg-*.exe',
     'bin/sexp-conv.exe',
     'bin/srptool.exe',
+    'bin/tjbench.exe',
     'bin/unxz.exe',
+    'bin/wrjpgcom.exe',
     'bin/xml*.exe',
     'bin/xz*',
     'include',
@@ -223,8 +229,23 @@ shutil.copy2(os.path.join(basedir, os.pardir, 'COPYING'),
              os.path.join(basedir, 'COPYING'))
 
 status_msg("Compiling GLib schemas")
-proc = subprocess.Popen(['glib-compile-schemas.exe',
+proc = subprocess.Popen([os.path.join(basedir, 'bin', 'glib-compile-schemas.exe'),
                          os.path.join(basedir, 'share', 'glib-2.0', 'schemas')])
+proc.communicate()
+if proc.returncode != 0:
+    sys.exit(proc.returncode)
+
+status_msg("Updating GTK icon cache")
+proc = subprocess.Popen([os.path.join(basedir, 'bin', 'gtk-update-icon-cache-3.0.exe'),
+                         '-q', '-t', '-f',
+                         os.path.join(basedir, 'share', 'icons', 'Adwaita')])
+proc.communicate()
+if proc.returncode != 0:
+    sys.exit(proc.returncode)
+
+status_msg("Updating GDK Pixbuf loader cache")
+proc = subprocess.Popen([os.path.join(basedir, 'bin', 'gdk-pixbuf-query-loaders.exe'),
+                         '--update-cache'])
 proc.communicate()
 if proc.returncode != 0:
     sys.exit(proc.returncode)

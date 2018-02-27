@@ -1,5 +1,5 @@
 #define MyAppName "gsshvnc"
-#define MyAppVersion "0.91"
+#define MyAppVersion "0.92"
 #define MyAppPublisher "Michael Hansen"
 #define MyAppURL "http://www.github.com/zrax/gsshvnc"
 #define MyAppExeName "gsshvnc.exe"
@@ -18,7 +18,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=COPYING
 OutputDir=.
-OutputBaseFilename=gsshvnc-setup
+OutputBaseFilename={#MyAppName}-setup-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -39,3 +39,8 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\bin\gsshvnc.exe"; Tasks: 
 
 [Run]
 Filename: "{app}\bin\gsshvnc.exe"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[InstallDelete]
+; Files removed from the distribution which may have been installed in previous
+; releases (usually due to msys2 package upgrades)
+Type: files; Name: "{app}\share\icons\Adwaita\512x512\emblems\emblem-synchronizing.png"
