@@ -113,6 +113,7 @@ public:
 
     static Glib::OptionGroup &option_group();
 
+    sigc::signal<void> signal_connection_lost() const { return m_signal_connection_lost; }
     sigc::signal<void> signal_want_reconnect() const { return m_signal_reconnect; }
 
     void set_capture_keyboard(bool enable=true);
@@ -136,7 +137,12 @@ private:
     Glib::SignalProxy1<void, const std::string &> signal_vnc_server_cut_text();
     Glib::SignalProxy0<void> signal_vnc_bell();
 
-    // Emitted when VNC disconnects and the user requests re-connection.
+    // Emitted when VNC disconnects for any reason, to signal that the
+    // SSH client should also terminate.  This is emitted before handling
+    // the user response and potentially requesting a reconnection.
+    sigc::signal<void> m_signal_connection_lost;
+
+    // Emitted after VNC disconnects and the user requests re-connection.
     sigc::signal<void> m_signal_reconnect;
 
     Gtk::Widget *m_vnc;

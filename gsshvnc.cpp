@@ -99,6 +99,9 @@ int main(int argc, char *argv[])
         Gtk::Main::quit();
         return false;
     });
+    vnc.signal_connection_lost().connect([&ssh]() {
+        ssh.disconnect();
+    });
     vnc.signal_want_reconnect().connect([&vnc, &ssh]() {
         vnc.hide();
         if (!show_connect_dialog(vnc, ssh))

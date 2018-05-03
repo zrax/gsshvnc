@@ -794,6 +794,7 @@ void Vnc::DisplayWindow::init_vnc()
 void Vnc::DisplayWindow::handle_disconnect(const Glib::ustring &connected_msg,
                                            const Glib::ustring &disconnected_msg)
 {
+    m_signal_connection_lost.emit();
     if (m_connected) {
         int result = Gtk::RESPONSE_CANCEL;
         {
