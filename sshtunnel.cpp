@@ -46,7 +46,7 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
 
     auto ppos = m_hostname.find(':');
     if (ppos != std::string::npos) {
-        port = std::to_string(5900 + std::stoi(m_hostname.substr(ppos + 1)));
+        port = std::to_string(std::stoi(m_hostname.substr(ppos + 1)));
         m_hostname.resize(ppos);
     } else {
         port = "22";
