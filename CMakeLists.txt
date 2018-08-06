@@ -19,6 +19,11 @@ project(gsshvnc)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
+# GCC 8 introduces these warnings which break gtkmm/sigc++
+if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-cast-function-type -Wno-parentheses")
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GVNC REQUIRED gvnc-1.0)
 pkg_check_modules(GTK_VNC REQUIRED gtk-vnc-2.0)
