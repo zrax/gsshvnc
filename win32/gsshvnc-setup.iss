@@ -1,5 +1,5 @@
 #define MyAppName "gsshvnc"
-#define MyAppVersion "0.92"
+#define MyAppVersion "0.93"
 #define MyAppPublisher "Michael Hansen"
 #define MyAppURL "http://www.github.com/zrax/gsshvnc"
 #define MyAppExeName "gsshvnc.exe"
@@ -43,4 +43,4 @@ Filename: "{app}\bin\gsshvnc.exe"; Description: "{cm:LaunchProgram,{#StringChang
 [InstallDelete]
 ; Files removed from the distribution which may have been installed in previous
 ; releases (usually due to msys2 package upgrades)
-Type: files; Name: "{app}\share\icons\Adwaita\512x512\emblems\emblem-synchronizing.png"
+#include "filelist-remove.iss"
