@@ -194,6 +194,7 @@ Vnc::DisplayWindow::DisplayWindow()
     });
 
     // Don't capture keyboard when the window doesn't have focus
+    add_events(Gdk::FOCUS_CHANGE_MASK);
     signal_focus_out_event().connect([this](GdkEventFocus *) -> bool {
         if (m_capture_keyboard->get_active()) {
             set_keyboard_grab(false);
