@@ -104,6 +104,7 @@ Vnc::DisplayWindow::DisplayWindow()
 
     submenu = Gtk::manage(new Gtk::Menu);
 
+    m_hide_menubar = Gtk::manage(new Gtk::CheckMenuItem("_Hide Menu Bar", true));
     m_fullscreen = Gtk::manage(new Gtk::CheckMenuItem("_Full Screen", true));
     m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
 
@@ -113,6 +114,8 @@ Vnc::DisplayWindow::DisplayWindow()
                             GdkModifierType(0), GtkAccelFlags(0),
                             g_cclosure_new_swap(G_CALLBACK(&_activate_menubar), this, nullptr));
 
+    submenu->append(*m_hide_menubar);
+    submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*m_fullscreen);
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*m_scaling);
@@ -165,6 +168,9 @@ Vnc::DisplayWindow::DisplayWindow()
 
     appquit->signal_activate().connect([]() { Gtk::Main::quit(); });
 
+    m_hide_menubar->signal_activate().connect([this]() {
+        toggle_menubar();
+    });
     m_fullscreen->signal_toggled().connect([this]() {
         if (m_fullscreen->get_active())
             fullscreen();
@@ -748,6 +754,10 @@ bool Vnc::DisplayWindow::get_capture_keyboard()
 
 void Vnc::DisplayWindow::activate_menubar()
 {
+    if (m_hide_menubar->get_active()) {
+        m_hide_menubar->set_active(false);
+        toggle_menubar();
+    }
     m_menubar->select_first();
 }
 
@@ -1045,6 +1055,18 @@ void Vnc::DisplayWindow::enable_modifiers()
     settings->property_gtk_enable_mnemonics().set_value(m_enable_mnemonics);
 
     m_accel_enabled = true;
+}
+
+void Vnc::DisplayWindow::toggle_menubar()
+{
+    auto size_alloc = get_allocation();
+    if (m_hide_menubar->get_active()) {
+        resize(size_alloc.get_width(), size_alloc.get_height() - m_menubar->get_height());
+        m_menubar->hide();
+    } else {
+        m_menubar->show();
+        resize(size_alloc.get_width(), size_alloc.get_height() + m_menubar->get_height());
+    }
 }
 
 void Vnc::DisplayWindow::update_scrolling()

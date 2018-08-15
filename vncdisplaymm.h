@@ -158,6 +158,7 @@ private:
 
     Gtk::MenuBar *m_menubar;
     Gtk::CheckMenuItem *m_capture_keyboard;
+    Gtk::CheckMenuItem *m_hide_menubar;
     Gtk::CheckMenuItem *m_fullscreen;
     Gtk::CheckMenuItem *m_scaling;
     Gtk::CheckMenuItem *m_smoothing;
@@ -178,6 +179,7 @@ private:
     void on_set_smoothing(bool enable=true);
     void disable_modifiers();
     void enable_modifiers();
+    void toggle_menubar();
 
     struct { int width, height; } m_remote_size;
     void update_scrolling();
