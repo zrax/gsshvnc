@@ -129,13 +129,6 @@ Vnc::DisplayWindow::DisplayWindow()
     // Minimal size in case a fixed size is not later requested
     set_size_request(600, 400);
 
-    // Can't find a pre-wrapped C++ version of this anywhere...
-    GSList *accels = gtk_accel_groups_from_object(G_OBJECT(gobj()));
-    for ( ; accels; accels = accels->next) {
-        auto group = Glib::wrap(GTK_ACCEL_GROUP(accels->data), true);
-        m_accel_groups.emplace_back(group);
-    }
-
     m_capture_keyboard->signal_activate().connect([this]() {
         bool enable = m_capture_keyboard->get_active();
         if (enable)
@@ -1008,10 +1001,6 @@ void Vnc::DisplayWindow::disable_modifiers()
     m_menu_bar_accel = settings->property_gtk_menu_bar_accel().get_value();
     settings->property_gtk_menu_bar_accel().set_value("");
 
-    /* This stops global accelerators like Ctrl+Q == Quit */
-    for (const auto &accel: m_accel_groups)
-        remove_accel_group(accel);
-
     /* This stops menu bar shortcuts like Alt+F == File */
     m_enable_mnemonics = settings->property_gtk_enable_mnemonics().get_value();
     settings->property_gtk_enable_mnemonics().set_value(false);
@@ -1028,10 +1017,6 @@ void Vnc::DisplayWindow::enable_modifiers()
 
     /* This allows F10 activating menu bar */
     settings->property_gtk_menu_bar_accel().set_value(m_menu_bar_accel);
-
-    /* This allows global accelerators like Ctrl+Q == Quit */
-    for (const auto &accel: m_accel_groups)
-        add_accel_group(accel);
 
     /* This allows menu bar shortcuts like Alt+F == File */
     settings->property_gtk_enable_mnemonics().set_value(m_enable_mnemonics);

@@ -153,7 +153,6 @@ private:
     bool m_accel_enabled;
     bool m_enable_mnemonics;
     Glib::ustring m_menu_bar_accel;
-    std::vector<Glib::RefPtr<Gtk::AccelGroup>> m_accel_groups;
 
     Gtk::MenuBar *m_menubar;
     Gtk::CheckMenuItem *m_capture_keyboard;
