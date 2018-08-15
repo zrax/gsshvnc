@@ -119,6 +119,8 @@ public:
     void set_capture_keyboard(bool enable=true);
     bool get_capture_keyboard();
 
+    void activate_menubar();
+
 private:
     Glib::SignalProxy0<void> signal_vnc_connected();
     Glib::SignalProxy0<void> signal_vnc_initialized();

@@ -47,6 +47,13 @@
 
 static Vnc::DisplayWindow *s_instance = nullptr;
 
+static gboolean _activate_menubar(Vnc::DisplayWindow *self, GtkAccelGroup *,
+                                  GObject *, guint, GdkModifierType)
+{
+    self->activate_menubar();
+    return TRUE;
+}
+
 Vnc::DisplayWindow::DisplayWindow()
     : m_vnc(), m_connected(false), m_accel_enabled(true), m_enable_mnemonics()
 {
@@ -77,11 +84,13 @@ Vnc::DisplayWindow::DisplayWindow()
     auto submenu = Gtk::manage(new Gtk::Menu);
 
     m_capture_keyboard = Gtk::manage(new Gtk::CheckMenuItem("Capture All _Keyboard Input", true));
+    auto send_f8 = Gtk::manage(new Gtk::MenuItem("Send F8", true));
     auto send_cad = Gtk::manage(new Gtk::MenuItem("Send Ctrl+Alt+_Del", true));
     auto screenshot = Gtk::manage(new Gtk::MenuItem("Take _Screenshot", true));
     auto appquit = Gtk::manage(new Gtk::MenuItem("_Quit", true));
 
     submenu->append(*m_capture_keyboard);
+    submenu->append(*send_f8);
     submenu->append(*send_cad);
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*screenshot);
@@ -97,6 +106,12 @@ Vnc::DisplayWindow::DisplayWindow()
 
     m_fullscreen = Gtk::manage(new Gtk::CheckMenuItem("_Full Screen", true));
     m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
+
+    auto activate_menubar_accel = Gtk::AccelGroup::create();
+    add_accel_group(activate_menubar_accel);
+    gtk_accel_group_connect(activate_menubar_accel->gobj(), GDK_KEY_F8,
+                            GdkModifierType(0), GtkAccelFlags(0),
+                            g_cclosure_new_swap(G_CALLBACK(&_activate_menubar), this, nullptr));
 
     submenu->append(*m_fullscreen);
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
@@ -142,6 +157,9 @@ Vnc::DisplayWindow::DisplayWindow()
     });
     send_cad->signal_activate().connect([this]() {
         send_keys({ GDK_KEY_Control_L, GDK_KEY_Alt_L, GDK_KEY_Delete });
+    });
+    send_f8->signal_activate().connect([this]() {
+        send_keys({ GDK_KEY_F8 });
     });
     screenshot->signal_activate().connect(sigc::mem_fun(this, &DisplayWindow::vnc_screenshot));
 
@@ -726,6 +744,11 @@ void Vnc::DisplayWindow::set_capture_keyboard(bool enable)
 bool Vnc::DisplayWindow::get_capture_keyboard()
 {
     return m_capture_keyboard->get_active();
+}
+
+void Vnc::DisplayWindow::activate_menubar()
+{
+    m_menubar->select_first();
 }
 
 VncDisplay *Vnc::DisplayWindow::get_vnc()
