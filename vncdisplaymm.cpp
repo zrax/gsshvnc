@@ -798,7 +798,10 @@ void Vnc::DisplayWindow::init_vnc()
     signal_vnc_desktop_resize().connect([this](gint width, gint height) {
         m_remote_size.width = width;
         m_remote_size.height = height;
-        resize(width, height + m_menubar->get_height());
+        if (m_hide_menubar->get_active())
+            resize(width, height);
+        else
+            resize(width, height + m_menubar->get_height());
         update_scrolling();
     });
 
