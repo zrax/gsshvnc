@@ -24,6 +24,11 @@
 #include <list>
 #include <iostream>
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 7, 90)
+// This was renamed in libssh 0.8.0
+#define ssh_get_server_publickey ssh_get_publickey
+#endif
+
 #define FORWARD_BUFFER_SIZE 4096
 
 SshTunnel::SshTunnel(Gtk::Window &parent)
@@ -162,7 +167,7 @@ bool SshTunnel::verify_host()
     int state = ssh_is_server_known(m_ssh);
 
     ssh_key server_key;
-    if (ssh_get_publickey(m_ssh, &server_key) < 0)
+    if (ssh_get_server_publickey(m_ssh, &server_key) < 0)
         return false;
 
     unsigned char *hash_buf = nullptr;
