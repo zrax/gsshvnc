@@ -2,6 +2,7 @@
 Type: files; Name: "{app}\share\icons\Adwaita\512x512\emblems\emblem-synchronizing.png"
 
 ; Removed in 0.93
+Type: files; Name: "{app}\bin\libssh_threads.dll"
 Type: files; Name: "{app}\bin\libturbojpeg-0.dll"
 Type: files; Name: "{app}\share\icons\Adwaita\16x16\status\audio-volume-high-symbolic.symbolic.png"
 Type: files; Name: "{app}\share\icons\Adwaita\16x16\status\audio-volume-low-symbolic.symbolic.png"
