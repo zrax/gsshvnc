@@ -226,6 +226,11 @@ Vnc::DisplayWindow::DisplayWindow()
         }
         return false;
     });
+
+    signal_show().connect([this]() {
+        if (m_hide_menubar->get_active())
+            m_menubar->hide();
+    });
 }
 
 Vnc::DisplayWindow::~DisplayWindow()
