@@ -190,7 +190,7 @@ bool SshTunnel::verify_host()
                             "New server key: %2\n\n"
                             "Connect anyway? (<b>NOT RECOMMENDED</b> unless you trust the new key)",
                             m_hostname, hash_str);
-            Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_QUESTION,
+            Gtk::MessageDialog dialog(m_parent, text, true, Gtk::MESSAGE_QUESTION,
                                       Gtk::BUTTONS_YES_NO);
             int response = dialog.run();
             if (response == Gtk::RESPONSE_NO)
@@ -202,9 +202,9 @@ bool SshTunnel::verify_host()
         {
             auto text = Glib::ustring::compose(
                             "The host key for %1 was not found, but another type of key exists.\n"
-                            "Connect anyway? (<b>NOT RECOMMENDED</b>)",
+                            "Connect anyway? (<b>NOT RECOMMENDED</b> unless you trust the new key)",
                             m_hostname);
-            Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_QUESTION,
+            Gtk::MessageDialog dialog(m_parent, text, true, Gtk::MESSAGE_QUESTION,
                                       Gtk::BUTTONS_YES_NO);
             int response = dialog.run();
             if (response == Gtk::RESPONSE_NO)
