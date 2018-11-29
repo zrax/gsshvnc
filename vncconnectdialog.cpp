@@ -168,6 +168,9 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     if (hostname.empty())
         hostname = "127.0.0.1";
 
+    // Reformat this for use by credential lookup/storage
+    vnc.set_vnc_host(Glib::ustring::compose("%1:%2", hostname, port));
+
     if (m_ssh_tunnel->get_active()) {
         auto ssh_string = m_ssh_host->get_active_text();
         auto username = m_ssh_user->get_active_text();
@@ -182,6 +185,8 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
         hostname = "127.0.0.1";
         port = std::to_string(local_port);
         vnc.set_ssh_host(tunnel.ssh_host());
+    } else {
+        vnc.set_ssh_host(Glib::ustring());
     }
 
     if (!vnc.open_host(hostname, port))

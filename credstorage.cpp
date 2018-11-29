@@ -19,18 +19,7 @@
 #include <libsecret/secret.h>
 #include <iostream>
 
-static const SecretSchema *_ssh_password_schema()
-{
-    static SecretSchema schema = {};
-    if (!schema.name) {
-        schema.name = "net.zrax.gsshvnc.SshPassword";
-        schema.flags = SECRET_SCHEMA_NONE;
-        schema.attributes[0] = { "user_host", SECRET_SCHEMA_ATTRIBUTE_STRING };
-    }
-    return &schema;
-}
-
-static void _ssh_password_stored(GObject *, GAsyncResult *result, gpointer)
+static void _password_stored(GObject *, GAsyncResult *result, gpointer)
 {
     GError *error = nullptr;
     secret_password_store_finish(result, &error);
@@ -41,13 +30,45 @@ static void _ssh_password_stored(GObject *, GAsyncResult *result, gpointer)
     }
 }
 
+static void _password_cleared(GObject *, GAsyncResult *result, gpointer)
+{
+    GError *error = nullptr;
+    secret_password_clear_finish(result, &error);
+    if (error) {
+        // Don't bother the UI
+        std::cerr << "Error clearing password: " << error->message << std::endl;
+        g_error_free(error);
+    }
+}
+
+static const SecretSchema *_ssh_password_schema()
+{
+    static SecretSchema schema = {};
+    if (!schema.name) {
+        schema.name = "net.zrax.gsshvnc.SshPassword";
+        schema.flags = SECRET_SCHEMA_NONE;
+        schema.attributes[0] = { "app_type", SECRET_SCHEMA_ATTRIBUTE_STRING };
+        schema.attributes[1] = { "user_host", SECRET_SCHEMA_ATTRIBUTE_STRING };
+    }
+    return &schema;
+}
+
 void CredentialStorage::remember_ssh_password(const Glib::ustring &ssh_user_host,
                                               const Glib::ustring &password)
 {
-    auto label = Glib::ustring::compose("gsshvnc %1", ssh_user_host);
     secret_password_store(_ssh_password_schema(), SECRET_COLLECTION_DEFAULT,
-                          label.c_str(), password.c_str(), nullptr,
-                          &_ssh_password_stored, nullptr,
+                          "gsshvnc SSH password", password.c_str(), nullptr,
+                          &_password_stored, nullptr,
+                          "app_type", "gsshvnc-ssh",
+                          "user_host", ssh_user_host.c_str(),
+                          nullptr);
+}
+
+void CredentialStorage::forget_ssh_password(const Glib::ustring &ssh_user_host)
+{
+    secret_password_clear(_ssh_password_schema(), nullptr,
+                          &_password_cleared, nullptr,
+                          "app_type", "gsshvnc-ssh",
                           "user_host", ssh_user_host.c_str(),
                           nullptr);
 }
@@ -57,6 +78,7 @@ Glib::ustring CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_use
     GError *error = nullptr;
     gchar *password = secret_password_lookup_sync(_ssh_password_schema(),
                             nullptr, &error,
+                            "app_type", "gsshvnc-ssh",
                             "user_host", ssh_user_host.c_str(),
                             nullptr);
     if (error) {
@@ -68,5 +90,78 @@ Glib::ustring CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_use
         secret_password_free(password);
         return result;
     }
+    return {};
+}
+
+static const SecretSchema *_vnc_password_schema()
+{
+    static SecretSchema schema = {};
+    if (!schema.name) {
+        schema.name = "net.zrax.gsshvnc.VncPassword";
+        schema.flags = SECRET_SCHEMA_NONE;
+        schema.attributes[0] = { "app_type", SECRET_SCHEMA_ATTRIBUTE_STRING };
+        schema.attributes[1] = { "ssh_host", SECRET_SCHEMA_ATTRIBUTE_STRING };
+        schema.attributes[2] = { "vnc_host", SECRET_SCHEMA_ATTRIBUTE_STRING };
+    }
+    return &schema;
+}
+
+void CredentialStorage::remember_vnc_password(const Glib::ustring &ssh_host,
+                                              const Glib::ustring &vnc_host,
+                                              const Glib::ustring &vnc_user,
+                                              const Glib::ustring &password)
+{
+    auto storage = Glib::ustring::compose("%1@%2", vnc_user, password);
+    secret_password_store(_vnc_password_schema(), SECRET_COLLECTION_DEFAULT,
+                          "gsshvnc VNC password", storage.c_str(), nullptr,
+                          &_password_stored, nullptr,
+                          "app_type", "gsshvnc-vnc",
+                          "ssh_host", ssh_host.c_str(),
+                          "vnc_host", vnc_host.c_str(),
+                          nullptr);
+}
+
+void CredentialStorage::forget_vnc_password(const Glib::ustring &ssh_host,
+                                            const Glib::ustring &vnc_host)
+{
+    secret_password_clear(_vnc_password_schema(), nullptr,
+                          &_password_cleared, nullptr,
+                          "app_type", "gsshvnc-vnc",
+                          "ssh_host", ssh_host.c_str(),
+                          "vnc_host", vnc_host.c_str(),
+                          nullptr);
+}
+
+std::pair<Glib::ustring, Glib::ustring>
+CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
+                                           const Glib::ustring &vnc_host)
+{
+    GError *error = nullptr;
+    gchar *storage = secret_password_lookup_sync(_vnc_password_schema(),
+                            nullptr, &error,
+                            "app_type", "gsshvnc-vnc",
+                            "ssh_host", ssh_host.c_str(),
+                            "vnc_host", vnc_host.c_str(),
+                            nullptr);
+    if (error) {
+        // Don't bother the UI
+        std::cerr << "Error retrieving saved credentials: " << error->message << std::endl;
+        g_error_free(error);
+    } else if (storage) {
+        Glib::ustring username(storage);
+        Glib::ustring password;
+        secret_password_free(storage);
+
+        auto upos = username.find('@');
+        if (upos == std::string::npos) {
+            std::cerr << "Ignoring invalid credential storage format" << std::endl;
+            return {};
+        }
+
+        password = username.substr(upos + 1);
+        username.resize(upos);
+        return std::make_pair(username, password);
+    }
+
     return {};
 }

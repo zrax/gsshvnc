@@ -55,7 +55,7 @@ private:
     std::atomic_bool m_eof;
 
     bool verify_host();
-    bool prompt_password();
+    bool prompt_password(bool tried_saved);
     void tunnel_server(int ssh_fd);
 };
 

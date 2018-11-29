@@ -24,8 +24,20 @@ class CredentialStorage
 public:
     static void remember_ssh_password(const Glib::ustring &ssh_user_host,
                                       const Glib::ustring &password);
+    static void forget_ssh_password(const Glib::ustring &ssh_user_host);
 
     static Glib::ustring fetch_ssh_password(const Glib::ustring &ssh_user_host);
+
+    static void remember_vnc_password(const Glib::ustring &ssh_host,
+                                      const Glib::ustring &vnc_host,
+                                      const Glib::ustring &vnc_user,
+                                      const Glib::ustring &password);
+    static void forget_vnc_password(const Glib::ustring &ssh_host,
+                                    const Glib::ustring &vnc_host);
+
+    static std::pair<Glib::ustring, Glib::ustring>
+                fetch_vnc_user_password(const Glib::ustring &ssh_host,
+                                        const Glib::ustring &vnc_host);
 };
 
 #endif // _CREDSTORAGE_H

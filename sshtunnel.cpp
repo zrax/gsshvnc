@@ -89,7 +89,7 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
             return true;
     }
 
-    return prompt_password();
+    return prompt_password(!saved_password.empty());
 }
 
 void SshTunnel::disconnect()
@@ -270,7 +270,7 @@ bool SshTunnel::verify_host()
     return true;
 }
 
-bool SshTunnel::prompt_password()
+bool SshTunnel::prompt_password(bool tried_saved)
 {
     Gtk::Dialog dialog("SSH Authentication", m_parent);
     dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
@@ -291,6 +291,7 @@ bool SshTunnel::prompt_password()
     password->set_activates_default(true);
     password->set_visibility(false);
     Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
+    remember->set_active(tried_saved);
 
     grid->attach(*hint_label, 0, 0, 1, 1);
     grid->attach(*host_hint, 1, 0, 1, 1);
@@ -319,6 +320,9 @@ bool SshTunnel::prompt_password()
 
     if (remember->get_active())
         CredentialStorage::remember_ssh_password(m_server_desc, password->get_text());
+    else
+        CredentialStorage::forget_ssh_password(m_server_desc);
+
     return true;
 }
 

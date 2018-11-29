@@ -59,7 +59,11 @@ public:
 
     //VncConnection *get_connection();
 
+    // For use in credential storage.
+    // NOTE: vnc_host might not match the one passed to open_host, since the
+    // latter might be a local socket through an SSH tunnel.
     void set_ssh_host(const Glib::ustring &ssh_host) { m_ssh_host = ssh_host; }
+    void set_vnc_host(const Glib::ustring &vnc_host) { m_vnc_host = vnc_host; }
 
     void send_keys(const std::vector<guint> &keys);
     void send_keys(const std::vector<guint> &keys, VncDisplayKeyEvent kind);
@@ -169,7 +173,7 @@ private:
 
     std::string m_clipboard_text;
 
-    // Used to disambiguate VNC desktops behind different SSH tunnels
+    Glib::ustring m_vnc_host;
     Glib::ustring m_ssh_host;
 
     void init_vnc();

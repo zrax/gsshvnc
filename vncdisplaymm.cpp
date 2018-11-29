@@ -16,6 +16,7 @@
 
 #include "vncdisplaymm.h"
 #include "appsettings.h"
+#include "credstorage.h"
 
 #include <glibmm/exceptionhandler.h>
 #include <glibmm/main.h>
@@ -26,6 +27,7 @@
 #include <gtkmm/grid.h>
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/entry.h>
+#include <gtkmm/checkbutton.h>
 #include <gtkmm/menubar.h>
 #include <gtkmm/checkmenuitem.h>
 #include <gtkmm/separatormenuitem.h>
@@ -942,6 +944,13 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
     std::vector<std::pair<Glib::ustring, bool>> data;
     data.resize(credList.size(), {Glib::ustring(), false});
 
+    // The user may want to change the username (and therefore probably also
+    // the password) they used to log in last, and the only way to re-try a
+    // password currently is to re-establish the connection.  Therefore,
+    // we always show the connection dialog, but pre-populated it with the
+    // saved credentials instead of trying the saved ones first with no prompt.
+    auto creds = CredentialStorage::fetch_vnc_user_password(m_ssh_host, m_vnc_host);
+
     unsigned int prompt = 0;
     for (size_t i = 0; i < credList.size(); ++i) {
         switch (credList[i]) {
@@ -964,9 +973,9 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
         dialog->set_default_response(Gtk::RESPONSE_OK);
 
         auto *grid = Gtk::manage(new Gtk::Grid);
-        grid->set_row_spacing(3);
-        grid->set_column_spacing(3);
-        grid->set_border_width(3);
+        grid->set_row_spacing(10);
+        grid->set_column_spacing(5);
+        grid->set_border_width(5);
         std::vector<Gtk::Label *> label;
         std::vector<Gtk::Entry *> entry;
         label.resize(prompt, nullptr);
@@ -979,21 +988,28 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             switch (cred) {
             case VNC_DISPLAY_CREDENTIAL_USERNAME:
                 label[row] = Gtk::manage(new Gtk::Label("Username:"));
+                entry[row]->set_text(creds.first);
                 break;
             case VNC_DISPLAY_CREDENTIAL_PASSWORD:
                 label[row] = Gtk::manage(new Gtk::Label("Password:"));
+                entry[row]->set_visibility(false);
+                entry[row]->set_text(creds.second);
                 entry[row]->set_activates_default(true);
                 break;
             default:
                 continue;
             }
-            if (cred == VNC_DISPLAY_CREDENTIAL_PASSWORD)
-                entry[row]->set_visibility(false);
+            label[row]->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
 
             grid->attach(*label[i], 0, row, 1, 1);
             grid->attach(*entry[i], 1, row, 1, 1);
             row++;
         }
+
+        Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
+        if (!creds.second.empty())
+            remember->set_active(true);
+        grid->attach(*remember, 0, row, 2, 1);
 
         auto vbox = dialog->get_child();
         dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
@@ -1004,16 +1020,27 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
         if (response == Gtk::RESPONSE_OK) {
             int row = 0;
+            Glib::ustring user, password;
             for (size_t i = 0; i < credList.size(); ++i) {
                 switch (credList[i]) {
                 case VNC_DISPLAY_CREDENTIAL_USERNAME:
+                    user = entry[row]->get_text();
+                    data[i] = {user, true};
+                    break;
                 case VNC_DISPLAY_CREDENTIAL_PASSWORD:
-                    data[i] = {entry[row]->get_text(), true};
+                    password = entry[row]->get_text();
+                    data[i] = {password, true};
                     break;
                 default:
                     continue;
                 }
                 row++;
+            }
+            if (remember->get_active()) {
+                CredentialStorage::remember_vnc_password(m_ssh_host, m_vnc_host,
+                                                         user, password);
+            } else {
+                CredentialStorage::forget_vnc_password(m_ssh_host, m_vnc_host);
             }
         } else {
             close_vnc();
