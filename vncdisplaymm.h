@@ -59,6 +59,8 @@ public:
 
     //VncConnection *get_connection();
 
+    void set_ssh_host(const Glib::ustring &ssh_host) { m_ssh_host = ssh_host; }
+
     void send_keys(const std::vector<guint> &keys);
     void send_keys(const std::vector<guint> &keys, VncDisplayKeyEvent kind);
 
@@ -166,6 +168,9 @@ private:
     void *m_pulse_ifc;
 
     std::string m_clipboard_text;
+
+    // Used to disambiguate VNC desktops behind different SSH tunnels
+    Glib::ustring m_ssh_host;
 
     void init_vnc();
     void handle_disconnect(const Glib::ustring &connected_msg,

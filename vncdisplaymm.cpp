@@ -359,7 +359,11 @@ int Vnc::DisplayWindow::get_height()
 
 Glib::ustring Vnc::DisplayWindow::get_name()
 {
-    return vnc_display_get_name(get_vnc());
+    auto vnc_name = vnc_display_get_name(get_vnc());
+    if (m_ssh_host.empty())
+        return vnc_name;
+
+    return Glib::ustring::compose("%1 [%2]", vnc_name, m_ssh_host);
 }
 
 void Vnc::DisplayWindow::client_cut_text(const std::string &text)

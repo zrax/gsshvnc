@@ -49,12 +49,13 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
 
     m_eof = false;
     m_hostname = server;
+    std::string hostname_no_port = m_hostname;
     std::string port;
 
-    auto ppos = m_hostname.find(':');
+    auto ppos = hostname_no_port.find(':');
     if (ppos != std::string::npos) {
-        port = std::to_string(std::stoi(m_hostname.substr(ppos + 1)));
-        m_hostname.resize(ppos);
+        port = std::to_string(std::stoi(hostname_no_port.substr(ppos + 1)));
+        hostname_no_port.resize(ppos);
     } else {
         port = "22";
     }
@@ -62,7 +63,7 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
     // Used for display and for storing credentials
     m_server_desc = Glib::ustring::compose("%1@%2", username, server);
 
-    ssh_options_set(m_ssh, SSH_OPTIONS_HOST, m_hostname.c_str());
+    ssh_options_set(m_ssh, SSH_OPTIONS_HOST, hostname_no_port.c_str());
     ssh_options_set(m_ssh, SSH_OPTIONS_PORT_STR, port.c_str());
     ssh_options_set(m_ssh, SSH_OPTIONS_USER, username.c_str());
 

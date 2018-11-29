@@ -181,6 +181,7 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
             return false;
         hostname = "127.0.0.1";
         port = std::to_string(local_port);
+        vnc.set_ssh_host(tunnel.ssh_host());
     }
 
     if (!vnc.open_host(hostname, port))

@@ -41,6 +41,8 @@ public:
 
     guint16 forward_port(const Glib::ustring &remote_host, int remote_port);
 
+    Glib::ustring ssh_host() const { return m_hostname; }
+
 private:
     Gtk::Window &m_parent;
     ssh_session m_ssh;
