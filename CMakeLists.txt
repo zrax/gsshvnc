@@ -28,6 +28,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GVNC REQUIRED gvnc-1.0)
 pkg_check_modules(GTK_VNC REQUIRED gtk-vnc-2.0)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+pkg_check_modules(SECRET REQUIRED libsecret-1)
 
 if(NOT GTK_VNC_VERSION VERSION_LESS "0.7.0")
     add_definitions(-DGTK_VNC_HAVE_SMOOTH_SCALING)
@@ -35,6 +36,7 @@ endif()
 
 include_directories(${GTK_VNC_INCLUDE_DIRS} ${GVNC_INCLUDE_DIRS})
 include_directories(${GTKMM_INCLUDE_DIRS})
+include_directories(${SECRET_INCLUDE_DIRS})
 
 pkg_check_modules(GVNCPULSE gvncpulse-1.0)
 if(GVNCPULSE_FOUND)
@@ -51,6 +53,7 @@ find_package(Threads REQUIRED)
 
 set(gsshvnc_HEADERS
     appsettings.h
+    credstorage.h
     sshtunnel.h
     vncconnectdialog.h
     vncdisplaymm.h
@@ -60,6 +63,7 @@ set(gsshvnc_HEADERS
 set(gsshvnc_SOURCES
     gsshvnc.cpp
     appsettings.cpp
+    credstorage.cpp
     sshtunnel.cpp
     vncconnectdialog.cpp
     vncdisplaymm.cpp
@@ -67,14 +71,15 @@ set(gsshvnc_SOURCES
 )
 
 add_executable(gsshvnc WIN32 ${gsshvnc_HEADERS} ${gsshvnc_SOURCES})
-target_link_libraries(gsshvnc ${GTK_VNC_LIBRARIES} ${GVNC_LIBRARIES})
-target_link_libraries(gsshvnc ${GTKMM_LIBRARIES})
+target_link_libraries(gsshvnc ${GTK_VNC_LDFLAGS} ${GVNC_LDFLAGS})
+target_link_libraries(gsshvnc ${GTKMM_LDFLAGS})
+target_link_libraries(gsshvnc ${SECRET_LDFLAGS})
 if(GVNCPULSE_FOUND)
-    target_link_libraries(gsshvnc ${GVNCPULSE_LIBRARIES})
+    target_link_libraries(gsshvnc ${GVNCPULSE_LDFLAGS})
 endif()
-target_link_libraries(gsshvnc ${LIBSSH_LIBRARIES})
+target_link_libraries(gsshvnc ${LIBSSH_LDFLAGS})
 if(LIBSSH_THREADS_FOUND)
-    target_link_libraries(gsshvnc ${LIBSSH_THREADS_LIBRARIES})
+    target_link_libraries(gsshvnc ${LIBSSH_THREADS_LDFLAGS})
 endif()
 target_link_libraries(gsshvnc Threads::Threads)
 if(WIN32)

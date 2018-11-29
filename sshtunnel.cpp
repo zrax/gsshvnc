@@ -15,10 +15,12 @@
  */
 
 #include "sshtunnel.h"
+#include "credstorage.h"
 
 #include <gtkmm/dialog.h>
 #include <gtkmm/grid.h>
 #include <gtkmm/entry.h>
+#include <gtkmm/checkbutton.h>
 #include <gtkmm/messagedialog.h>
 #include <giomm.h>
 #include <list>
@@ -57,6 +59,9 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
         port = "22";
     }
 
+    // Used for display and for storing credentials
+    m_server_desc = Glib::ustring::compose("%1@%2", username, server);
+
     ssh_options_set(m_ssh, SSH_OPTIONS_HOST, m_hostname.c_str());
     ssh_options_set(m_ssh, SSH_OPTIONS_PORT_STR, port.c_str());
     ssh_options_set(m_ssh, SSH_OPTIONS_USER, username.c_str());
@@ -75,6 +80,13 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
     // TODO: Support SSH public keys with a passphrase
     if (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS)
         return true;
+
+    // Try saved password first, if any
+    Glib::ustring saved_password = CredentialStorage::fetch_ssh_password(m_server_desc);
+    if (!saved_password.empty()) {
+        if (ssh_userauth_password(m_ssh, nullptr, saved_password.c_str()) == SSH_AUTH_SUCCESS)
+            return true;
+    }
 
     return prompt_password();
 }
@@ -265,16 +277,25 @@ bool SshTunnel::prompt_password()
     dialog.set_default_response(Gtk::RESPONSE_OK);
 
     auto *grid = Gtk::manage(new Gtk::Grid);
-    grid->set_row_spacing(3);
-    grid->set_column_spacing(3);
-    grid->set_border_width(3);
+    grid->set_row_spacing(10);
+    grid->set_column_spacing(5);
+    grid->set_border_width(5);
+    Gtk::Label *hint_label = Gtk::manage(new Gtk::Label("SSH Host:"));
+    hint_label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
+    Gtk::Label *host_hint = Gtk::manage(new Gtk::Label(m_server_desc));
+    host_hint->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
     Gtk::Label *label = Gtk::manage(new Gtk::Label("Password:"));
+    label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_CENTER);
     Gtk::Entry *password = Gtk::manage(new Gtk::Entry);
     password->set_activates_default(true);
     password->set_visibility(false);
+    Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
 
-    grid->attach(*label, 0, 0, 1, 1);
-    grid->attach(*password, 1, 0, 1, 1);
+    grid->attach(*hint_label, 0, 0, 1, 1);
+    grid->attach(*host_hint, 1, 0, 1, 1);
+    grid->attach(*label, 0, 1, 1, 1);
+    grid->attach(*password, 1, 1, 1, 1);
+    grid->attach(*remember, 0, 2, 2, 1);
 
     auto vbox = dialog.get_child();
     dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
@@ -295,6 +316,8 @@ bool SshTunnel::prompt_password()
         return false;
     }
 
+    if (remember->get_active())
+        CredentialStorage::remember_ssh_password(m_server_desc, password->get_text());
     return true;
 }
 

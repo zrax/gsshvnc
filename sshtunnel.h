@@ -45,6 +45,7 @@ private:
     Gtk::Window &m_parent;
     ssh_session m_ssh;
     Glib::ustring m_hostname;
+    Glib::ustring m_server_desc;
     Glib::RefPtr<Gio::Socket> m_forward_socket;
     std::thread m_forward_thread;
     Glib::ustring m_remote_host;
