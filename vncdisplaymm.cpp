@@ -1009,11 +1009,11 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
                         (const Glib::ustring &user, const Glib::ustring &password) {
             if (user_entry && !user.empty()) {
                 user_entry->set_text(user);
-                user_entry->set_position(user.size());
+                user_entry->select_region(0, user.size());
             }
             if (password_entry && !password.empty()) {
                 password_entry->set_text(password);
-                password_entry->set_position(password.size());
+                password_entry->select_region(0, password.size());
             }
         });
         creds.fetch_vnc_user_password(m_ssh_host, m_vnc_host);

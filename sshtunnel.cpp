@@ -302,7 +302,7 @@ bool SshTunnel::prompt_password()
     creds.got_ssh_password().connect([password](const Glib::ustring &saved_password) {
         if (!saved_password.empty()) {
             password->set_text(saved_password);
-            password->set_position(saved_password.size());
+            password->select_region(0, saved_password.size());
         }
     });
     creds.fetch_ssh_password(m_server_desc);
