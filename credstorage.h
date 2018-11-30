@@ -18,13 +18,16 @@
 #define _CREDSTORAGE_H
 
 #include <glibmm/ustring.h>
-#include <giomm/cancellable.h>
 #include <sigc++/sigc++.h>
+
+#ifdef USE_LIBSECRET
+#include <giomm/cancellable.h>
+#endif
 
 class CredentialStorage
 {
 public:
-    CredentialStorage() : m_cancel(Gio::Cancellable::create()) { }
+    CredentialStorage();
     ~CredentialStorage();
 
     static void remember_ssh_password(const Glib::ustring &ssh_user_host,
@@ -52,7 +55,9 @@ private:
     sigc::signal<void, Glib::ustring> m_got_ssh_password;
     sigc::signal<void, Glib::ustring, Glib::ustring> m_got_vnc_password;
 
+#ifdef USE_LIBSECRET
     Glib::RefPtr<Gio::Cancellable> m_cancel;
+#endif
 };
 
 #endif // _CREDSTORAGE_H

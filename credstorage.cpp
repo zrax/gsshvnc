@@ -16,8 +16,11 @@
 
 #include "credstorage.h"
 
-#include <libsecret/secret.h>
 #include <iostream>
+
+#if defined(USE_LIBSECRET)
+
+#include <libsecret/secret.h>
 
 static void _password_stored(GObject *, GAsyncResult *result, gpointer)
 {
@@ -39,6 +42,11 @@ static void _password_cleared(GObject *, GAsyncResult *result, gpointer)
         std::cerr << "Error clearing password: " << error->message << std::endl;
         g_error_free(error);
     }
+}
+
+CredentialStorage::CredentialStorage()
+    : m_cancel(Gio::Cancellable::create())
+{
 }
 
 CredentialStorage::~CredentialStorage()
@@ -181,3 +189,117 @@ void CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
                            "vnc_host", vnc_host.c_str(),
                            nullptr);
 }
+
+#elif defined(_WIN32)
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <wincred.h>
+
+#include <locale>
+#include <codecvt>
+
+CredentialStorage::CredentialStorage() { }
+CredentialStorage::~CredentialStorage() { }
+
+static inline std::wstring _to_wstring(const Glib::ustring &ustr)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.from_bytes(ustr);
+}
+
+static inline Glib::ustring _to_ustring(const std::wstring &wstr)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.to_bytes(wstr);
+}
+
+void CredentialStorage::remember_ssh_password(const Glib::ustring &ssh_user_host,
+                                              const Glib::ustring &password)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-ssh/%1", ssh_user_host));
+
+    CREDENTIALW credential = {};
+    credential.Type = CRED_TYPE_GENERIC;
+    credential.TargetName = const_cast<LPWSTR>(target.c_str());
+    credential.CredentialBlobSize = password.size();
+    credential.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<char *>(password.c_str()));
+    credential.Persist = CRED_PERSIST_LOCAL_MACHINE;
+
+    CredWriteW(&credential, 0);
+}
+
+void CredentialStorage::forget_ssh_password(const Glib::ustring &ssh_user_host)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-ssh/%1", ssh_user_host));
+    CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0);
+}
+
+void CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_user_host)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-ssh/%1", ssh_user_host));
+
+    CREDENTIALW *credential = nullptr;
+    if (CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &credential)) {
+        Glib::ustring password(reinterpret_cast<const char *>(credential->CredentialBlob),
+                               credential->CredentialBlobSize);
+        m_got_ssh_password.emit(password);
+        CredFree(credential);
+    }
+}
+
+void CredentialStorage::remember_vnc_password(const Glib::ustring &ssh_host,
+                                              const Glib::ustring &vnc_host,
+                                              const Glib::ustring &vnc_user,
+                                              const Glib::ustring &password)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-vnc/%1/%2", ssh_host, vnc_host));
+    auto storage = Glib::ustring::compose("%1@%2", vnc_user, password);
+
+    CREDENTIALW credential = {};
+    credential.Type = CRED_TYPE_GENERIC;
+    credential.TargetName = const_cast<LPWSTR>(target.c_str());
+    credential.CredentialBlobSize = storage.size();
+    credential.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<char *>(storage.c_str()));
+    credential.Persist = CRED_PERSIST_LOCAL_MACHINE;
+
+    CredWriteW(&credential, 0);
+}
+
+void CredentialStorage::forget_vnc_password(const Glib::ustring &ssh_host,
+                                            const Glib::ustring &vnc_host)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-vnc/%1/%2", ssh_host, vnc_host));
+    CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0);
+}
+
+void CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
+                                                const Glib::ustring &vnc_host)
+{
+    auto target = _to_wstring(Glib::ustring::compose("gsshvnc-vnc/%1/%2", ssh_host, vnc_host));
+
+    CREDENTIALW *credential = nullptr;
+    if (CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &credential)) {
+        Glib::ustring storage(reinterpret_cast<const char *>(credential->CredentialBlob),
+                              credential->CredentialBlobSize);
+
+        Glib::ustring username(storage);
+        Glib::ustring password;
+        auto upos = username.find('@');
+        if (upos == std::string::npos) {
+            std::cerr << "Ignoring invalid credential storage format" << std::endl;
+        } else {
+            password = username.substr(upos + 1);
+            username.resize(upos);
+            m_got_vnc_password.emit(username, password);
+        }
+
+        CredFree(credential);
+    }
+}
+
+#else
+
+#error This platform is not yet supported
+
+#endif
