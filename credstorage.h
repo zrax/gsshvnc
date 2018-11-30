@@ -18,15 +18,20 @@
 #define _CREDSTORAGE_H
 
 #include <glibmm/ustring.h>
+#include <giomm/cancellable.h>
+#include <sigc++/sigc++.h>
 
 class CredentialStorage
 {
 public:
+    CredentialStorage() : m_cancel(Gio::Cancellable::create()) { }
+    ~CredentialStorage();
+
     static void remember_ssh_password(const Glib::ustring &ssh_user_host,
                                       const Glib::ustring &password);
     static void forget_ssh_password(const Glib::ustring &ssh_user_host);
 
-    static Glib::ustring fetch_ssh_password(const Glib::ustring &ssh_user_host);
+    void fetch_ssh_password(const Glib::ustring &ssh_user_host);
 
     static void remember_vnc_password(const Glib::ustring &ssh_host,
                                       const Glib::ustring &vnc_host,
@@ -35,9 +40,19 @@ public:
     static void forget_vnc_password(const Glib::ustring &ssh_host,
                                     const Glib::ustring &vnc_host);
 
-    static std::pair<Glib::ustring, Glib::ustring>
-                fetch_vnc_user_password(const Glib::ustring &ssh_host,
-                                        const Glib::ustring &vnc_host);
+    void fetch_vnc_user_password(const Glib::ustring &ssh_host,
+                                 const Glib::ustring &vnc_host);
+
+    sigc::signal<void, Glib::ustring> &
+            got_ssh_password() { return m_got_ssh_password; }
+    sigc::signal<void, Glib::ustring, Glib::ustring> &
+            got_vnc_password() { return m_got_vnc_password; }
+
+private:
+    sigc::signal<void, Glib::ustring> m_got_ssh_password;
+    sigc::signal<void, Glib::ustring, Glib::ustring> m_got_vnc_password;
+
+    Glib::RefPtr<Gio::Cancellable> m_cancel;
 };
 
 #endif // _CREDSTORAGE_H

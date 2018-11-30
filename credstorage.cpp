@@ -41,6 +41,11 @@ static void _password_cleared(GObject *, GAsyncResult *result, gpointer)
     }
 }
 
+CredentialStorage::~CredentialStorage()
+{
+    m_cancel->cancel();
+}
+
 static const SecretSchema *_ssh_password_schema()
 {
     static SecretSchema schema = {};
@@ -73,14 +78,12 @@ void CredentialStorage::forget_ssh_password(const Glib::ustring &ssh_user_host)
                           nullptr);
 }
 
-Glib::ustring CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_user_host)
+static void _ssh_password_found(GObject *, GAsyncResult *result, gpointer user)
 {
+    CredentialStorage *self = reinterpret_cast<CredentialStorage *>(user);
+
     GError *error = nullptr;
-    gchar *password = secret_password_lookup_sync(_ssh_password_schema(),
-                            nullptr, &error,
-                            "app_type", "gsshvnc-ssh",
-                            "user_host", ssh_user_host.c_str(),
-                            nullptr);
+    gchar *password = secret_password_lookup_finish(result, &error);
     if (error) {
         // Don't bother the UI
         std::cerr << "Error retrieving saved password: " << error->message << std::endl;
@@ -88,9 +91,18 @@ Glib::ustring CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_use
     } else if (password) {
         Glib::ustring result(password);
         secret_password_free(password);
-        return result;
+        self->got_ssh_password().emit(result);
     }
-    return {};
+}
+
+void CredentialStorage::fetch_ssh_password(const Glib::ustring &ssh_user_host)
+{
+    m_cancel->reset();
+    secret_password_lookup(_ssh_password_schema(), m_cancel->gobj(),
+                           &_ssh_password_found, this,
+                           "app_type", "gsshvnc-ssh",
+                           "user_host", ssh_user_host.c_str(),
+                           nullptr);
 }
 
 static const SecretSchema *_vnc_password_schema()
@@ -132,17 +144,12 @@ void CredentialStorage::forget_vnc_password(const Glib::ustring &ssh_host,
                           nullptr);
 }
 
-std::pair<Glib::ustring, Glib::ustring>
-CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
-                                           const Glib::ustring &vnc_host)
+static void _vnc_password_found(GObject *, GAsyncResult *result, gpointer user)
 {
+    CredentialStorage *self = reinterpret_cast<CredentialStorage *>(user);
+
     GError *error = nullptr;
-    gchar *storage = secret_password_lookup_sync(_vnc_password_schema(),
-                            nullptr, &error,
-                            "app_type", "gsshvnc-vnc",
-                            "ssh_host", ssh_host.c_str(),
-                            "vnc_host", vnc_host.c_str(),
-                            nullptr);
+    gchar *storage = secret_password_lookup_finish(result, &error);
     if (error) {
         // Don't bother the UI
         std::cerr << "Error retrieving saved credentials: " << error->message << std::endl;
@@ -155,13 +162,22 @@ CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
         auto upos = username.find('@');
         if (upos == std::string::npos) {
             std::cerr << "Ignoring invalid credential storage format" << std::endl;
-            return {};
+        } else {
+            password = username.substr(upos + 1);
+            username.resize(upos);
+            self->got_vnc_password().emit(username, password);
         }
-
-        password = username.substr(upos + 1);
-        username.resize(upos);
-        return std::make_pair(username, password);
     }
+}
 
-    return {};
+void CredentialStorage::fetch_vnc_user_password(const Glib::ustring &ssh_host,
+                                                const Glib::ustring &vnc_host)
+{
+    m_cancel->reset();
+    secret_password_lookup(_vnc_password_schema(), m_cancel->gobj(),
+                           &_vnc_password_found, this,
+                           "app_type", "gsshvnc-vnc",
+                           "ssh_host", ssh_host.c_str(),
+                           "vnc_host", vnc_host.c_str(),
+                           nullptr);
 }

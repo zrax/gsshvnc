@@ -944,13 +944,6 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
     std::vector<std::pair<Glib::ustring, bool>> data;
     data.resize(credList.size(), {Glib::ustring(), false});
 
-    // The user may want to change the username (and therefore probably also
-    // the password) they used to log in last, and the only way to re-try a
-    // password currently is to re-establish the connection.  Therefore,
-    // we always show the connection dialog, but pre-populated it with the
-    // saved credentials instead of trying the saved ones first with no prompt.
-    auto creds = CredentialStorage::fetch_vnc_user_password(m_ssh_host, m_vnc_host);
-
     unsigned int prompt = 0;
     for (size_t i = 0; i < credList.size(); ++i) {
         switch (credList[i]) {
@@ -967,6 +960,11 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
     std::unique_ptr<Gtk::Dialog> dialog;
     if (prompt) {
+        AppSettings settings;
+
+        Gtk::Entry *user_entry = nullptr;
+        Gtk::Entry *password_entry = nullptr;
+
         dialog = std::make_unique<Gtk::Dialog>("VNC Authentication", *this);
         dialog->add_button("_Cancel", Gtk::RESPONSE_CANCEL);
         dialog->add_button("_Ok", Gtk::RESPONSE_OK);
@@ -985,16 +983,16 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
         for (size_t i = 0; i < credList.size(); ++i) {
             auto cred = credList[i];
             entry[row] = Gtk::manage(new Gtk::Entry);
+            entry[row]->set_activates_default(true);
             switch (cred) {
             case VNC_DISPLAY_CREDENTIAL_USERNAME:
                 label[row] = Gtk::manage(new Gtk::Label("Username:"));
-                entry[row]->set_text(creds.first);
+                user_entry = entry[row];
                 break;
             case VNC_DISPLAY_CREDENTIAL_PASSWORD:
                 label[row] = Gtk::manage(new Gtk::Label("Password:"));
                 entry[row]->set_visibility(false);
-                entry[row]->set_text(creds.second);
-                entry[row]->set_activates_default(true);
+                password_entry = entry[row];
                 break;
             default:
                 continue;
@@ -1006,9 +1004,22 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             row++;
         }
 
+        CredentialStorage creds;
+        creds.got_vnc_password().connect([user_entry, password_entry]
+                        (const Glib::ustring &user, const Glib::ustring &password) {
+            if (user_entry && !user.empty()) {
+                user_entry->set_text(user);
+                user_entry->set_position(user.size());
+            }
+            if (password_entry && !password.empty()) {
+                password_entry->set_text(password);
+                password_entry->set_position(password.size());
+            }
+        });
+        creds.fetch_vnc_user_password(m_ssh_host, m_vnc_host);
+
         Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
-        if (!creds.second.empty())
-            remember->set_active(true);
+        remember->set_active(settings.get_save_vnc_credentials());
         grid->attach(*remember, 0, row, 2, 1);
 
         auto vbox = dialog->get_child();
@@ -1020,16 +1031,11 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
 
         if (response == Gtk::RESPONSE_OK) {
             int row = 0;
-            Glib::ustring user, password;
             for (size_t i = 0; i < credList.size(); ++i) {
                 switch (credList[i]) {
                 case VNC_DISPLAY_CREDENTIAL_USERNAME:
-                    user = entry[row]->get_text();
-                    data[i] = {user, true};
-                    break;
                 case VNC_DISPLAY_CREDENTIAL_PASSWORD:
-                    password = entry[row]->get_text();
-                    data[i] = {password, true};
+                    data[i] = {entry[row]->get_text(), true};
                     break;
                 default:
                     continue;
@@ -1038,10 +1044,12 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             }
             if (remember->get_active()) {
                 CredentialStorage::remember_vnc_password(m_ssh_host, m_vnc_host,
-                                                         user, password);
+                                        user_entry ? user_entry->get_text() : Glib::ustring(),
+                                        password_entry ? password_entry->get_text() : Glib::ustring());
             } else {
                 CredentialStorage::forget_vnc_password(m_ssh_host, m_vnc_host);
             }
+            settings.set_save_vnc_credentials(remember->get_active());
         } else {
             close_vnc();
             return;

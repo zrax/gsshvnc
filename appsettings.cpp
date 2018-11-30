@@ -42,6 +42,8 @@ AppSettings::AppSettings()
     read_setting(config_file, "Main", "CaptureKeyboard", "true");
     read_setting(config_file, "Main", "ScaledDisplay", "true");
     read_setting(config_file, "Main", "SmoothScaling", "true");
+    read_setting(config_file, "Main", "SaveSSHPassword", "false");
+    read_setting(config_file, "Main", "SaveVNCCredentials", "false");
 }
 
 AppSettings::~AppSettings()
@@ -158,6 +160,26 @@ bool AppSettings::get_smooth_scaling() const
 void AppSettings::set_smooth_scaling(bool enable)
 {
     set_bool("Main/SmoothScaling", enable);
+}
+
+bool AppSettings::get_save_ssh_password() const
+{
+    return get_bool("Main/SaveSSHPassword");
+}
+
+void AppSettings::set_save_ssh_password(bool save)
+{
+    set_bool("Main/SaveSSHPassword", save);
+}
+
+bool AppSettings::get_save_vnc_credentials() const
+{
+    return get_bool("Main/SaveVNCCredentials");
+}
+
+void AppSettings::set_save_vnc_credentials(bool save)
+{
+    set_bool("Main/SaveVNCCredentials", save);
 }
 
 void AppSettings::read_setting(Glib::KeyFile &conf_file, const Glib::ustring &group_name,

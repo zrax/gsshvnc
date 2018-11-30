@@ -119,8 +119,8 @@ public:
 
     static Glib::OptionGroup &option_group();
 
-    sigc::signal<void> signal_connection_lost() const { return m_signal_connection_lost; }
-    sigc::signal<void> signal_want_reconnect() const { return m_signal_reconnect; }
+    sigc::signal<void> &signal_connection_lost() { return m_signal_connection_lost; }
+    sigc::signal<void> &signal_want_reconnect() { return m_signal_reconnect; }
 
     void set_capture_keyboard(bool enable=true);
     bool get_capture_keyboard();

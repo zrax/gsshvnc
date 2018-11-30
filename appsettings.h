@@ -64,6 +64,12 @@ public:
     bool get_smooth_scaling() const;
     void set_smooth_scaling(bool enable);
 
+    bool get_save_ssh_password() const;
+    void set_save_ssh_password(bool save);
+
+    bool get_save_vnc_credentials() const;
+    void set_save_vnc_credentials(bool save);
+
 private:
     std::unordered_map<std::string, Glib::ustring> m_values;
     std::unordered_set<std::string> m_modified_keys;

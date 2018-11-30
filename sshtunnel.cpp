@@ -15,6 +15,7 @@
  */
 
 #include "sshtunnel.h"
+#include "appsettings.h"
 #include "credstorage.h"
 
 #include <gtkmm/dialog.h>
@@ -82,14 +83,7 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
     if (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS)
         return true;
 
-    // Try saved password first, if any
-    Glib::ustring saved_password = CredentialStorage::fetch_ssh_password(m_server_desc);
-    if (!saved_password.empty()) {
-        if (ssh_userauth_password(m_ssh, nullptr, saved_password.c_str()) == SSH_AUTH_SUCCESS)
-            return true;
-    }
-
-    return prompt_password(!saved_password.empty());
+    return prompt_password();
 }
 
 void SshTunnel::disconnect()
@@ -270,8 +264,10 @@ bool SshTunnel::verify_host()
     return true;
 }
 
-bool SshTunnel::prompt_password(bool tried_saved)
+bool SshTunnel::prompt_password()
 {
+    AppSettings settings;
+
     Gtk::Dialog dialog("SSH Authentication", m_parent);
     dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
     dialog.add_button("_Ok", Gtk::RESPONSE_OK);
@@ -291,7 +287,7 @@ bool SshTunnel::prompt_password(bool tried_saved)
     password->set_activates_default(true);
     password->set_visibility(false);
     Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
-    remember->set_active(tried_saved);
+    remember->set_active(settings.get_save_ssh_password());
 
     grid->attach(*hint_label, 0, 0, 1, 1);
     grid->attach(*host_hint, 1, 0, 1, 1);
@@ -301,6 +297,15 @@ bool SshTunnel::prompt_password(bool tried_saved)
 
     auto vbox = dialog.get_child();
     dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
+
+    CredentialStorage creds;
+    creds.got_ssh_password().connect([password](const Glib::ustring &saved_password) {
+        if (!saved_password.empty()) {
+            password->set_text(saved_password);
+            password->set_position(saved_password.size());
+        }
+    });
+    creds.fetch_ssh_password(m_server_desc);
 
     dialog.show_all();
     int response = dialog.run();
@@ -322,6 +327,7 @@ bool SshTunnel::prompt_password(bool tried_saved)
         CredentialStorage::remember_ssh_password(m_server_desc, password->get_text());
     else
         CredentialStorage::forget_ssh_password(m_server_desc);
+    settings.set_save_ssh_password(remember->get_active());
 
     return true;
 }
