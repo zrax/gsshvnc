@@ -22,7 +22,7 @@
 #include <unordered_set>
 #include <glibmm/ustring.h>
 
-#define GSSHVNC_VERSION_STR "0.93"
+#define GSSHVNC_VERSION_STR "0.94"
 
 namespace Glib
 {

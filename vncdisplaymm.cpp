@@ -206,7 +206,7 @@ Vnc::DisplayWindow::DisplayWindow()
         dialog.set_comments("gsshvnc (pronounced \"Gosh VNC\") is a simple VNC "
                             "client with built-in support for SSH tunneling");
         dialog.set_authors({"Michael Hansen <zrax0111@gmail.com>"});
-        dialog.set_copyright("Copyright \u00a9 2017 Michael Hansen");
+        dialog.set_copyright("Copyright \u00a9 2018 Michael Hansen");
         dialog.set_license_type(Gtk::LICENSE_GPL_2_0);
         dialog.set_website("https://github.com/zrax/gsshvnc");
         (void)dialog.run();

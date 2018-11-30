@@ -89,6 +89,7 @@ clean_patterns=[
     'bin/dumpsexp.exe',
     'bin/fc-*',
     'bin/gnutls-*.exe',
+    'bin/gtester-report.exe',
     'bin/gtk3-*.exe',
     'bin/gr2fonttest.exe',
     'bin/hb-*.exe',
