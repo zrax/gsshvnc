@@ -1004,8 +1004,15 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
             row++;
         }
 
+        Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
+        remember->set_active(settings.get_save_vnc_credentials());
+        grid->attach(*remember, 0, row, 2, 1);
+
+        auto vbox = dialog->get_child();
+        dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
+
         CredentialStorage creds;
-        creds.got_vnc_password().connect([user_entry, password_entry]
+        creds.got_vnc_password().connect([user_entry, password_entry, remember]
                         (const Glib::ustring &user, const Glib::ustring &password) {
             if (user_entry && !user.empty()) {
                 user_entry->set_text(user);
@@ -1015,15 +1022,10 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
                 password_entry->set_text(password);
                 password_entry->select_region(0, password.size());
             }
+            if (!user.empty() || !password.empty())
+                remember->set_active(true);
         });
         creds.fetch_vnc_user_password(m_ssh_host, m_vnc_host);
-
-        Gtk::CheckButton *remember = Gtk::manage(new Gtk::CheckButton("_Remember password", true));
-        remember->set_active(settings.get_save_vnc_credentials());
-        grid->attach(*remember, 0, row, 2, 1);
-
-        auto vbox = dialog->get_child();
-        dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
 
         dialog->show_all();
         int response = dialog->run();

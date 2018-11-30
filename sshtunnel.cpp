@@ -299,10 +299,11 @@ bool SshTunnel::prompt_password()
     dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
 
     CredentialStorage creds;
-    creds.got_ssh_password().connect([password](const Glib::ustring &saved_password) {
+    creds.got_ssh_password().connect([password, remember](const Glib::ustring &saved_password) {
         if (!saved_password.empty()) {
             password->set_text(saved_password);
             password->select_region(0, saved_password.size());
+            remember->set_active(true);
         }
     });
     creds.fetch_ssh_password(m_server_desc);
