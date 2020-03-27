@@ -32,6 +32,11 @@
 #define ssh_get_server_publickey ssh_get_publickey
 #endif
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
+// Known hosts handling was reworked in 0.8.0
+#define ssh_session_update_known_hosts ssh_write_knownhost
+#endif
+
 #define FORWARD_BUFFER_SIZE 4096
 
 SshTunnel::SshTunnel(Gtk::Window &parent)
@@ -171,7 +176,11 @@ guint16 SshTunnel::forward_port(const Glib::ustring &remote_host, int remote_por
 
 bool SshTunnel::verify_host()
 {
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     int state = ssh_is_server_known(m_ssh);
+#else
+    ssh_known_hosts_e state = ssh_session_is_known_server(m_ssh);
+#endif
 
     ssh_key server_key;
     if (ssh_get_server_publickey(m_ssh, &server_key) < 0)
@@ -187,10 +196,18 @@ bool SshTunnel::verify_host()
     free(hash_buf);
 
     switch (state) {
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     case SSH_SERVER_KNOWN_OK:
+#else
+    case SSH_KNOWN_HOSTS_OK:
+#endif
         break;
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     case SSH_SERVER_KNOWN_CHANGED:
+#else
+    case SSH_KNOWN_HOSTS_CHANGED:
+#endif
         {
             auto text = Glib::ustring::compose(
                             "Host key for %1 has changed\n"
@@ -205,7 +222,11 @@ bool SshTunnel::verify_host()
         }
         break;
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     case SSH_SERVER_FOUND_OTHER:
+#else
+    case SSH_KNOWN_HOSTS_OTHER:
+#endif
         {
             auto text = Glib::ustring::compose(
                             "The host key for %1 was not found, but another type of key exists.\n"
@@ -219,8 +240,13 @@ bool SshTunnel::verify_host()
         }
         break;
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     case SSH_SERVER_FILE_NOT_FOUND:
     case SSH_SERVER_NOT_KNOWN:
+#else
+    case SSH_KNOWN_HOSTS_NOT_FOUND:
+    case SSH_KNOWN_HOSTS_UNKNOWN:
+#endif
         {
             auto text = Glib::ustring::compose(
                             "The host key for %1 is not known.\n"
@@ -233,7 +259,7 @@ bool SshTunnel::verify_host()
             if (response == Gtk::RESPONSE_NO)
                 return false;
 
-            if (ssh_write_knownhost(m_ssh) < 0) {
+            if (ssh_session_update_known_hosts(m_ssh) < 0) {
                 auto text = Glib::ustring::compose("Error writing SSH host key: %1",
                                                    ssh_get_error(m_ssh));
                 Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
@@ -243,7 +269,11 @@ bool SshTunnel::verify_host()
         }
         break;
 
+#if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
     case SSH_SERVER_ERROR:
+#else
+    case SSH_KNOWN_HOSTS_ERROR:
+#endif
         {
             auto text = Glib::ustring::compose("Error connecting to %1: %2", m_hostname,
                                                ssh_get_error(m_ssh));
