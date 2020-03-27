@@ -112,16 +112,16 @@ if(WIN32)
     add_custom_command(
         OUTPUT gsshvnc.ico
         COMMAND ${ICOTOOL} -c -o gsshvnc.ico
-            ${ICON_THEME_PATH}/16x16/apps/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/24x24/apps/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/32x32/apps/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/48x48/apps/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/256x256/apps/preferences-desktop-remote-desktop.png
+            ${ICON_THEME_PATH}/16x16/legacy/preferences-desktop-remote-desktop.png
+            ${ICON_THEME_PATH}/24x24/legacy/preferences-desktop-remote-desktop.png
+            ${ICON_THEME_PATH}/32x32/legacy/preferences-desktop-remote-desktop.png
+            ${ICON_THEME_PATH}/48x48/legacy/preferences-desktop-remote-desktop.png
+            ${ICON_THEME_PATH}/256x256/legacy/preferences-desktop-remote-desktop.png
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     )
     add_custom_target(gsshvnc_icon DEPENDS gsshvnc.ico)
     add_dependencies(gsshvnc gsshvnc_icon)
-    target_sources(gsshvnc PUBLIC win32/gsshvnc.rc)
+    target_sources(gsshvnc PRIVATE win32/gsshvnc.rc)
 endif()
 
 install(TARGETS gsshvnc RUNTIME DESTINATION bin)
