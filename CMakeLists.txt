@@ -95,32 +95,6 @@ if(WIN32)
 endif()
 
 if(WIN32)
-    find_program(ICOTOOL NAMES icotool)
-    if(NOT ICOTOOL)
-        message(FATAL_ERROR "icotool (from icoutils) is required on Windows")
-    endif()
-
-    find_path(
-        ICON_THEME_PATH
-        NAMES index.theme
-        PATH_SUFFIXES share/icons/Adwaita
-    )
-    if (NOT ICON_THEME_PATH)
-        message(FATAL_ERROR "Could not find an Adwaita-compatible icon theme")
-    endif()
-
-    add_custom_command(
-        OUTPUT gsshvnc.ico
-        COMMAND ${ICOTOOL} -c -o gsshvnc.ico
-            ${ICON_THEME_PATH}/16x16/legacy/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/24x24/legacy/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/32x32/legacy/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/48x48/legacy/preferences-desktop-remote-desktop.png
-            ${ICON_THEME_PATH}/256x256/legacy/preferences-desktop-remote-desktop.png
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    )
-    add_custom_target(gsshvnc_icon DEPENDS gsshvnc.ico)
-    add_dependencies(gsshvnc gsshvnc_icon)
     target_sources(gsshvnc PRIVATE win32/gsshvnc.rc)
 endif()
 
