@@ -22,7 +22,6 @@ project('gsshvnc', 'cpp',
 
 # GCC 8 introduces these warnings which break gtkmm/sigc++
 cpp_compiler = meson.get_compiler('cpp')
-message('Compiler version: ' + cpp_compiler.version())
 if cpp_compiler.get_id() == 'gcc' and cpp_compiler.version().version_compare('>=8.0')
     add_global_arguments('-Wno-cast-function-type', '-Wno-parentheses',
                          language: ['c', 'cpp'])
