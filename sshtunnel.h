@@ -28,7 +28,7 @@ namespace Gtk
 
 class Window;
 
-};
+}
 
 class SshTunnel
 {
