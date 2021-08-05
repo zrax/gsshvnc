@@ -64,6 +64,9 @@ public:
     bool get_smooth_scaling() const;
     void set_smooth_scaling(bool enable);
 
+    bool get_keep_aspect_ratio() const;
+    void set_keep_aspect_ratio(bool enable);
+
     bool get_save_ssh_password() const;
     void set_save_ssh_password(bool save);
 

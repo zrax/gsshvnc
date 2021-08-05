@@ -42,6 +42,7 @@ AppSettings::AppSettings()
     read_setting(config_file, "Main", "CaptureKeyboard", "true");
     read_setting(config_file, "Main", "ScaledDisplay", "true");
     read_setting(config_file, "Main", "SmoothScaling", "true");
+    read_setting(config_file, "Main", "KeepAspectRatio", "true");
     read_setting(config_file, "Main", "SaveSSHPassword", "false");
     read_setting(config_file, "Main", "SaveVNCCredentials", "false");
 }
@@ -160,6 +161,16 @@ bool AppSettings::get_smooth_scaling() const
 void AppSettings::set_smooth_scaling(bool enable)
 {
     set_bool("Main/SmoothScaling", enable);
+}
+
+bool AppSettings::get_keep_aspect_ratio() const
+{
+    return get_bool("Main/KeepAspectRatio");
+}
+
+void AppSettings::set_keep_aspect_ratio(bool enable)
+{
+    set_bool("Main/KeepAspectRatio", enable);
 }
 
 bool AppSettings::get_save_ssh_password() const

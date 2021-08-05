@@ -199,6 +199,7 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     vnc.set_capture_keyboard(settings.get_capture_keyboard());
     vnc.set_scaling(settings.get_scaled_display());
     vnc.set_smoothing(settings.get_smooth_scaling());
+    vnc.set_keep_aspect_ratio(settings.get_keep_aspect_ratio());
 
     // Save settings if the configuration was successful
     auto form_text = m_host->get_active_text();

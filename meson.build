@@ -23,7 +23,7 @@ project('gsshvnc', 'cpp',
 # GCC 8 introduces these warnings which break gtkmm/sigc++
 cpp_compiler = meson.get_compiler('cpp')
 if cpp_compiler.get_id() == 'gcc' and cpp_compiler.version().version_compare('>=8.0')
-    add_global_arguments('-Wno-cast-function-type', '-Wno-parentheses',
+    add_global_arguments('-Wno-cast-function-type', '-Wno-parentheses', '-Wno-attributes',
                          language: ['c', 'cpp'])
 endif
 
@@ -41,6 +41,9 @@ endif
 
 if gtk_vnc_dep.version().version_compare('>=0.7.0')
     gsshvnc_defs += ['-DGTK_VNC_HAVE_SMOOTH_SCALING']
+endif
+if gtk_vnc_dep.version().version_compare('>=1.2.0')
+    gsshvnc_defs += ['-DGTK_VNC_HAVE_VNCVERSION']
 endif
 
 gvncpulse_dep = dependency('gvncpulse-1.0', required: false)

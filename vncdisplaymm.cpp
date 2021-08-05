@@ -130,6 +130,14 @@ Vnc::DisplayWindow::DisplayWindow()
     m_smoothing = nullptr;
 #endif
 
+#if VNC_CHECK_VERSION(1, 2, 0)
+    m_keep_ratio = Gtk::manage(new Gtk::CheckMenuItem("Keep _Aspect Ratio", true));
+    m_keep_ratio->set_active(true);
+    submenu->append(*m_keep_ratio);
+#else
+    m_keep_ratio = nullptr;
+#endif
+
     view->set_submenu(*submenu);
 
     auto help = Gtk::manage(new Gtk::MenuItem("_Help", true));
@@ -194,6 +202,15 @@ Vnc::DisplayWindow::DisplayWindow()
 
         AppSettings settings;
         settings.set_smooth_scaling(enable);
+    });
+#endif
+#if VNC_CHECK_VERSION(1, 2, 0)
+    m_keep_ratio->signal_toggled().connect([this]() {
+        bool enable = m_keep_ratio->get_active();
+        on_set_keep_aspect_ratio(enable);
+
+        AppSettings settings;
+        settings.set_keep_aspect_ratio(enable);
     });
 #endif
 
@@ -436,6 +453,32 @@ bool Vnc::DisplayWindow::get_smoothing()
 #else
     /* Always enabled for gtk-vnc < 0.7.0 */
     return true;
+#endif
+}
+
+void Vnc::DisplayWindow::on_set_keep_aspect_ratio(bool enable)
+{
+#if VNC_CHECK_VERSION(1, 2, 0)
+    vnc_display_set_keep_aspect_ratio(get_vnc(), enable);
+#else
+    (void)enable;
+#endif
+}
+
+void Vnc::DisplayWindow::set_keep_aspect_ratio(bool enable)
+{
+    on_set_keep_aspect_ratio(enable);
+#if VNC_CHECK_VERSION(1, 2, 0)
+    m_keep_ratio->set_active(enable);
+#endif
+}
+
+bool Vnc::DisplayWindow::get_keep_aspect_ratio()
+{
+#if VNC_CHECK_VERSION(1, 2, 0)
+    return static_cast<bool>(vnc_display_get_keep_aspect_ratio(get_vnc()));
+#else
+    return false;
 #endif
 }
 

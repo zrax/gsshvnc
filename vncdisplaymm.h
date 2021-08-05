@@ -23,6 +23,13 @@
 #include <gtkmm/window.h>
 #include <vncdisplay.h>
 
+#ifdef GTK_VNC_HAVE_VNCVERSION
+    // Introduced in v1.2.0
+#   include <vncversion.h>
+#else
+#   define VNC_CHECK_VERSION(major, minor, micro)  (0)
+#endif
+
 #include "vncgrabsequencemm.h"
 
 namespace Gio
@@ -107,6 +114,10 @@ public:
     void set_smoothing(bool enable=true);
     bool get_smoothing();
 
+    /* gtk-vnc >= 1.2.0 */
+    void set_keep_aspect_ratio(bool enable=true);
+    bool get_keep_aspect_ratio();
+
     void set_shared_flag(bool enable=true);
     bool get_shared_flag();
 
@@ -168,6 +179,7 @@ private:
     Gtk::CheckMenuItem *m_fullscreen;
     Gtk::CheckMenuItem *m_scaling;
     Gtk::CheckMenuItem *m_smoothing;
+    Gtk::CheckMenuItem *m_keep_ratio;
 
     void *m_pulse_ifc;
 
@@ -186,6 +198,7 @@ private:
     void vnc_credential(const std::vector<VncDisplayCredential> &credList);
     bool on_set_scaling(bool enable=true);
     void on_set_smoothing(bool enable=true);
+    void on_set_keep_aspect_ratio(bool enable=true);
     void disable_modifiers();
     void enable_modifiers();
     void toggle_menubar();
