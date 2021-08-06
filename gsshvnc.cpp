@@ -27,11 +27,11 @@
 static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
 {
     Vnc::ConnectDialog dialog(vnc);
-    for (int retries = 3; retries; --retries) {
+    for ( ;; ) {
         dialog.show_all();
         int response = dialog.run();
         if (response != Gtk::RESPONSE_OK)
-            return false;
+            break;
 
         if (dialog.configure(vnc, ssh)) {
             vnc.show_all();
@@ -41,17 +41,12 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
         dialog.hide();
         Gtk::MessageDialog msg_dialog(vnc, "Failed to connect to VNC server",
                                       false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
-        if (retries > 1) {
-            msg_dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
-            msg_dialog.add_button("_Retry", Gtk::RESPONSE_YES);
-            msg_dialog.set_default_response(Gtk::RESPONSE_YES);
-            response = msg_dialog.run();
-            if (response != Gtk::RESPONSE_YES)
-                return false;
-        } else {
-            msg_dialog.add_button("_Ok", Gtk::RESPONSE_OK);
-            (void)msg_dialog.run();
-        }
+        msg_dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
+        msg_dialog.add_button("_Retry", Gtk::RESPONSE_YES);
+        msg_dialog.set_default_response(Gtk::RESPONSE_YES);
+        response = msg_dialog.run();
+        if (response != Gtk::RESPONSE_YES)
+            break;
     }
 
     return false;
