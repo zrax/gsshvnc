@@ -27,9 +27,11 @@
 static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
 {
     Vnc::ConnectDialog dialog(vnc);
+    dialog.show_all();
     for ( ;; ) {
-        dialog.show_all();
+        dialog.set_sensitive(true);
         int response = dialog.run();
+        dialog.set_sensitive(false);
         if (response != Gtk::RESPONSE_OK)
             break;
 
@@ -38,7 +40,6 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
             return true;
         }
 
-        dialog.hide();
         Gtk::MessageDialog msg_dialog(vnc, "Failed to connect to VNC server",
                                       false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_NONE);
         msg_dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
@@ -98,7 +99,6 @@ int main(int argc, char *argv[])
         ssh.disconnect();
     });
     vnc.signal_want_reconnect().connect([&vnc, &ssh]() {
-        vnc.hide();
         if (!show_connect_dialog(vnc, ssh))
             Gtk::Main::quit();
     });

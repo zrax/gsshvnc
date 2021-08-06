@@ -829,7 +829,6 @@ void Vnc::DisplayWindow::init_vnc()
     m_vnc = Glib::wrap(vnc_display_new());
     m_viewport->remove();
     m_viewport->add(*m_vnc);
-    gtk_widget_realize(m_vnc->gobj());
 
     signal_vnc_connected().connect([this]() { m_connected = true; });
     signal_vnc_initialized().connect(sigc::mem_fun(this, &DisplayWindow::vnc_initialized));
