@@ -271,7 +271,7 @@ remove_empty_dirs(basedir)
 
 status_msg("Writing installer file list")
 with open(os.path.join(basedir, 'filelist.iss'), 'w') as listfile:
-    print('Source: "COPYING"; DestDir: "{{app}}\\COPYING"; Flags: ignoreversion',
+    print('Source: "COPYING"; DestDir: "{app}"; Flags: ignoreversion',
           file=listfile)
     for rdir in release_dirs:
         for root, dirs, files in os.walk(os.path.join(basedir, rdir)):
