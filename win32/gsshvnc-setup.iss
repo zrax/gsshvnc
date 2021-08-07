@@ -1,5 +1,5 @@
 #define MyAppName "gsshvnc"
-#define MyAppVersion "0.94"
+#define MyAppVersion "0.95"
 #define MyAppPublisher "Michael Hansen"
 #define MyAppURL "http://www.github.com/zrax/gsshvnc"
 #define MyAppExeName "gsshvnc.exe"
@@ -16,7 +16,6 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-LicenseFile=COPYING
 OutputDir=.
 OutputBaseFilename={#MyAppName}-setup-{#MyAppVersion}
 Compression=lzma
