@@ -198,6 +198,7 @@ bool Vnc::ConnectDialog::configure(Vnc::DisplayWindow &vnc, SshTunnel &tunnel)
     AppSettings settings;
     vnc.set_capture_keyboard(settings.get_capture_keyboard());
     vnc.set_scaling(settings.get_scaled_display());
+    vnc.set_allow_resize(settings.get_allow_resize());
     vnc.set_smoothing(settings.get_smooth_scaling());
     vnc.set_keep_aspect_ratio(settings.get_keep_aspect_ratio());
 

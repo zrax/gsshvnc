@@ -67,6 +67,9 @@ public:
     bool get_keep_aspect_ratio() const;
     void set_keep_aspect_ratio(bool enable);
 
+    bool get_allow_resize() const;
+    void set_allow_resize(bool enable);
+
     bool get_save_ssh_password() const;
     void set_save_ssh_password(bool save);
 

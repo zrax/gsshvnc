@@ -45,6 +45,7 @@ namespace Gtk
 class ScrolledWindow;
 class MenuBar;
 class CheckMenuItem;
+class RadioMenuItem;
 
 }
 
@@ -104,11 +105,15 @@ public:
     void set_lossy_encoding(bool enable=true);
     bool get_lossy_encoding();
 
-    bool set_scaling(bool enable=true);
+    void set_scaling(bool enable=true);
     bool get_scaling();
 
     void set_force_size(bool enable=true);
     bool get_force_size();
+
+    /* gtk-vnc >= 1.2.0 */
+    void set_allow_resize(bool enable=true);
+    bool get_allow_resize();
 
     /* Not supported on gtk-vnc < 0.7.0 */
     void set_smoothing(bool enable=true);
@@ -177,7 +182,9 @@ private:
     Gtk::CheckMenuItem *m_capture_keyboard;
     Gtk::CheckMenuItem *m_hide_menubar;
     Gtk::CheckMenuItem *m_fullscreen;
-    Gtk::CheckMenuItem *m_scaling;
+    Gtk::RadioMenuItem *m_resize_none;
+    Gtk::RadioMenuItem *m_resize_scale;
+    Gtk::RadioMenuItem *m_resize_remote;
     Gtk::CheckMenuItem *m_smoothing;
     Gtk::CheckMenuItem *m_keep_ratio;
 
@@ -196,7 +203,8 @@ private:
     void vnc_initialized();
     void update_title(bool grabbed);
     void vnc_credential(const std::vector<VncDisplayCredential> &credList);
-    bool on_set_scaling(bool enable=true);
+    void on_set_scaling(bool enable=true);
+    void on_set_allow_resize(bool enable=true);
     void on_set_smoothing(bool enable=true);
     void on_set_keep_aspect_ratio(bool enable=true);
     void disable_modifiers();

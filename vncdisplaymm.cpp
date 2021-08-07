@@ -30,6 +30,7 @@
 #include <gtkmm/checkbutton.h>
 #include <gtkmm/menubar.h>
 #include <gtkmm/checkmenuitem.h>
+#include <gtkmm/radiomenuitem.h>
 #include <gtkmm/separatormenuitem.h>
 #include <gtkmm/settings.h>
 #include <gtkmm/filechooserdialog.h>
@@ -108,7 +109,19 @@ Vnc::DisplayWindow::DisplayWindow()
 
     m_hide_menubar = Gtk::manage(new Gtk::CheckMenuItem("_Hide Menu Bar", true));
     m_fullscreen = Gtk::manage(new Gtk::CheckMenuItem("_Full Screen", true));
-    m_scaling = Gtk::manage(new Gtk::CheckMenuItem("_Scaled Display", true));
+    auto resize_menu = Gtk::manage(new Gtk::Menu);
+
+    Gtk::RadioMenuItem::Group resize_group;
+    m_resize_none = Gtk::manage(new Gtk::RadioMenuItem(resize_group, "_None", true));
+    m_resize_none->set_active(true);
+    resize_menu->append(*m_resize_none);
+    m_resize_scale = Gtk::manage(new Gtk::RadioMenuItem(resize_group, "_Scaled", true));
+    resize_menu->append(*m_resize_scale);
+    m_resize_remote = Gtk::manage(new Gtk::RadioMenuItem(resize_group, "_Resize Remote", true));
+    resize_menu->append(*m_resize_remote);
+
+    auto resize = Gtk::manage(new Gtk::MenuItem("_Resize Mode", true));
+    resize->set_submenu(*resize_menu);
 
     auto activate_menubar_accel = Gtk::AccelGroup::create();
     add_accel_group(activate_menubar_accel);
@@ -120,7 +133,7 @@ Vnc::DisplayWindow::DisplayWindow()
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
     submenu->append(*m_fullscreen);
     submenu->append(*Gtk::manage(new Gtk::SeparatorMenuItem));
-    submenu->append(*m_scaling);
+    submenu->append(*resize);
 
 #ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     m_smoothing = Gtk::manage(new Gtk::CheckMenuItem("S_mooth Scaling", true));
@@ -187,14 +200,44 @@ Vnc::DisplayWindow::DisplayWindow()
         else
             unfullscreen();
     });
-    m_scaling->signal_toggled().connect([this]() {
-        bool enable = m_scaling->get_active();
-        on_set_scaling(enable);
+    m_resize_none->signal_toggled().connect([this]() {
+        if (!m_resize_none->get_active())
+            return;
+
+        on_set_scaling(false);
+        on_set_allow_resize(false);
         update_scrolling();
 
         AppSettings settings;
-        settings.set_scaled_display(enable);
+        settings.set_scaled_display(false);
+        settings.set_allow_resize(false);
     });
+    m_resize_scale->signal_toggled().connect([this]() {
+        if (!m_resize_scale->get_active())
+            return;
+
+        on_set_allow_resize(false);
+        on_set_scaling(true);
+        update_scrolling();
+
+        AppSettings settings;
+        settings.set_allow_resize(false);
+        settings.set_scaled_display(true);
+    });
+#if VNC_CHECK_VERSION(1, 2, 0)
+    m_resize_remote->signal_toggled().connect([this]() {
+        if (!m_resize_remote->get_active())
+            return;
+
+        on_set_scaling(false);
+        on_set_allow_resize(true);
+        update_scrolling();
+
+        AppSettings settings;
+        settings.set_scaled_display(false);
+        settings.set_allow_resize(true);
+    });
+#endif
 #ifdef GTK_VNC_HAVE_SMOOTH_SCALING
     m_smoothing->signal_toggled().connect([this]() {
         bool enable = m_smoothing->get_active();
@@ -400,18 +443,17 @@ bool Vnc::DisplayWindow::get_lossy_encoding()
     return static_cast<bool>(vnc_display_get_lossy_encoding(get_vnc()));
 }
 
-bool Vnc::DisplayWindow::on_set_scaling(bool enable)
+void Vnc::DisplayWindow::on_set_scaling(bool enable)
 {
-    // Why does this return a result?
-    return static_cast<bool>(vnc_display_set_scaling(get_vnc(), enable));
+    vnc_display_set_scaling(get_vnc(), enable);
 }
 
-bool Vnc::DisplayWindow::set_scaling(bool enable)
+void Vnc::DisplayWindow::set_scaling(bool enable)
 {
-    bool result = on_set_scaling(enable);
-    m_scaling->set_active(enable);
+    on_set_scaling(enable);
+    if (enable)
+        m_resize_scale->set_active(true);
     update_scrolling();
-    return result;
 }
 
 bool Vnc::DisplayWindow::get_scaling()
@@ -427,6 +469,34 @@ void Vnc::DisplayWindow::set_force_size(bool enable)
 bool Vnc::DisplayWindow::get_force_size()
 {
     return static_cast<bool>(vnc_display_get_force_size(get_vnc()));
+}
+
+void Vnc::DisplayWindow::on_set_allow_resize(bool enable)
+{
+#if VNC_CHECK_VERSION(1, 2, 0)
+    vnc_display_set_allow_resize(get_vnc(), enable);
+#else
+    (void)enable;
+#endif
+}
+
+void Vnc::DisplayWindow::set_allow_resize(bool enable)
+{
+    on_set_allow_resize(enable);
+#if VNC_CHECK_VERSION(1, 2, 0)
+    if (enable)
+        m_resize_remote->set_active(true);
+    update_scrolling();
+#endif
+}
+
+bool Vnc::DisplayWindow::get_allow_resize()
+{
+#if VNC_CHECK_VERSION(1, 2, 0)
+    return static_cast<bool>(vnc_display_get_allow_resize(get_vnc()));
+#else
+    return false;
+#endif
 }
 
 void Vnc::DisplayWindow::on_set_smoothing(bool enable)
@@ -1162,7 +1232,7 @@ void Vnc::DisplayWindow::toggle_menubar()
 
 void Vnc::DisplayWindow::update_scrolling()
 {
-    bool enable_scrolling = !m_scaling->get_active();
+    const bool enable_scrolling = m_resize_none->get_active();
     set_force_size(enable_scrolling);
     if (enable_scrolling)
         m_vnc->set_size_request(m_remote_size.width, m_remote_size.height);

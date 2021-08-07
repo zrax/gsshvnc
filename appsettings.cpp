@@ -43,6 +43,7 @@ AppSettings::AppSettings()
     read_setting(config_file, "Main", "ScaledDisplay", "true");
     read_setting(config_file, "Main", "SmoothScaling", "true");
     read_setting(config_file, "Main", "KeepAspectRatio", "true");
+    read_setting(config_file, "Main", "AllowResize", "false");
     read_setting(config_file, "Main", "SaveSSHPassword", "false");
     read_setting(config_file, "Main", "SaveVNCCredentials", "false");
 }
@@ -176,6 +177,16 @@ void AppSettings::set_keep_aspect_ratio(bool enable)
 bool AppSettings::get_save_ssh_password() const
 {
     return get_bool("Main/SaveSSHPassword");
+}
+
+void AppSettings::set_allow_resize(bool enable)
+{
+    set_bool("Main/AllowResize", enable);
+}
+
+bool AppSettings::get_allow_resize() const
+{
+    return get_bool("Main/AllowResize");
 }
 
 void AppSettings::set_save_ssh_password(bool save)
