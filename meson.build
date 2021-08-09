@@ -14,7 +14,7 @@
 # along with gsshvnc.  If not, see <http://www.gnu.org/licenses/>.
 
 project('gsshvnc', 'cpp',
-        version: '0.94.0',
+        version: '0.95.0',
         license: 'GPLv2+',
         meson_version: '>=0.37',
         default_options: ['cpp_std=c++14', 'warning_level=3']
