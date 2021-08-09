@@ -117,8 +117,10 @@ Vnc::DisplayWindow::DisplayWindow()
     resize_menu->append(*m_resize_none);
     m_resize_scale = Gtk::manage(new Gtk::RadioMenuItem(resize_group, "_Scaled", true));
     resize_menu->append(*m_resize_scale);
+#if VNC_CHECK_VERSION(1, 2, 0)
     m_resize_remote = Gtk::manage(new Gtk::RadioMenuItem(resize_group, "_Resize Remote", true));
     resize_menu->append(*m_resize_remote);
+#endif
 
     auto resize = Gtk::manage(new Gtk::MenuItem("_Resize Mode", true));
     resize->set_submenu(*resize_menu);
