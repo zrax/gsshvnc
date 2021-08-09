@@ -37,6 +37,7 @@
 #include <gtkmm/messagedialog.h>
 #include <gtkmm/aboutdialog.h>
 #include <iostream>
+#include <memory>
 #include <ctime>
 
 #ifdef HAVE_PULSEAUDIO
