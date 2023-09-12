@@ -192,8 +192,8 @@ bool SshTunnel::verify_host()
         return false;
     char *temp = ssh_get_hexa(hash_buf, hash_len);
     Glib::ustring hash_str(temp);
-    free(temp);
-    free(hash_buf);
+    ssh_string_free_char(temp);
+    ssh_clean_pubkey_hash(&hash_buf);
 
     switch (state) {
 #if LIBSSH_VERSION_INT < SSH_VERSION_INT(0, 8, 0)
