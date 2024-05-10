@@ -11,8 +11,8 @@ import glob
 import subprocess
 
 # The MSYS package and directory prefixes for deployed packages
-pkg_prefix = 'mingw-w64-x86_64'
-msys_prefix = '/mingw64'
+pkg_prefix = 'mingw-w64-ucrt-x86_64'
+msys_prefix = '/ucrt64'
 
 # Packages required to run gsshvnc
 deploy_packages=[
@@ -31,7 +31,7 @@ deploy_packages=[
     'fribidi',
     'gcc-libs',
     'gdk-pixbuf2',
-    'gettext',
+    'gettext-runtime',
     'glib2',
     'glibmm',
     'gmp',
@@ -66,7 +66,7 @@ deploy_packages=[
     'p11-kit',
     'pango',
     'pangomm',
-    'pcre',
+    'pcre2',
     'pixman',
     'shared-mime-info',
     'xz',
@@ -80,11 +80,11 @@ clean_patterns=[
     'bin/*-config',
     'bin/*gettext*',
     'bin/asn1*.exe',
-    'bin/autopoint',
     'bin/broadwayd.exe',
     'bin/brotli.exe',
     'bin/bunzip2.exe',
     'bin/bz*',
+    'bin/c_rehash',
     'bin/cjpeg.exe',
     'bin/csslint*.exe',
     'bin/djpeg.exe',
@@ -113,7 +113,6 @@ clean_patterns=[
     'bin/recode*.exe',
     'bin/rsvg-*.exe',
     'bin/sexp-conv.exe',
-    'bin/srptool.exe',
     'bin/tjbench.exe',
     'bin/unxz.exe',
     'bin/wrjpgcom.exe',
@@ -130,7 +129,6 @@ clean_patterns=[
     'lib/girepository-1.0',
     'lib/pkgconfig',
     'lib/python*',
-    'lib/xml2Conf.sh',
     'share/aclocal',
     'share/applications',
     'share/bash-completion',
@@ -139,13 +137,11 @@ clean_patterns=[
     'share/gir-1.0',
     'share/glib-2.0/codegen',
     'share/graphite2/*.cmake',
-    'share/gtk-doc',
     'share/icons/Adwaita/*/emotes',
     'share/icons/Adwaita/cursors',
     'share/info',
     'share/man',
     'share/vala',
-    'var/cache',
 ]
 
 basedir = os.path.dirname(os.path.realpath(__file__))
@@ -176,12 +172,6 @@ def pkg_get_files(pkgname):
         filenames.append(str(parts[1], 'utf-8'))
 
     return filenames
-
-def run_pacman(args, root):
-    proc = subprocess.Popen(['pacman', *args, '--root', root])
-    proc.communicate()
-    if proc.returncode != 0:
-        sys.exit(proc.returncode)
 
 def win32_permission_handler(func, path, exc_info):
     os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
