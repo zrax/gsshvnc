@@ -56,6 +56,7 @@ private:
 
     bool verify_host();
     bool prompt_password();
+    bool interactive();
     void tunnel_server(int ssh_fd);
 };
 
