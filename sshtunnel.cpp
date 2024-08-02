@@ -84,11 +84,27 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
     if (!verify_host())
         return false;
 
+    if (ssh_userauth_none(m_ssh, nullptr) == SSH_AUTH_SUCCESS)
+        return true;
+    auto auth_methods = ssh_userauth_list(m_ssh, nullptr);
+    if (auth_methods == 0) {
+        // Server MAY reply to ssh_userauth_list, if it don't try anyway
+        auth_methods = (SSH_AUTH_METHOD_PUBLICKEY|
+                        SSH_AUTH_METHOD_PASSWORD|
+                        SSH_AUTH_METHOD_INTERACTIVE);
+    }
+
     // TODO: Support SSH public keys with a passphrase
-    if (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS)
+    if ((auth_methods & SSH_AUTH_METHOD_PUBLICKEY) && (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS))
         return true;
 
-    return prompt_password();
+    if ((auth_methods & SSH_AUTH_METHOD_PASSWORD) && prompt_password())
+        return true;
+
+    if ((auth_methods & SSH_AUTH_METHOD_INTERACTIVE) && interactive())
+        return true;
+
+    return false;
 }
 
 void SshTunnel::disconnect()
@@ -359,6 +375,77 @@ bool SshTunnel::prompt_password()
     else
         CredentialStorage::forget_ssh_password(m_server_desc);
     settings.set_save_ssh_password(remember->get_active());
+
+    return true;
+}
+
+bool SshTunnel::interactive()
+{
+    AppSettings settings;
+
+    int result = ssh_userauth_kbdint(m_ssh, nullptr, nullptr);
+    while (result == SSH_AUTH_INFO) {
+        const char *name = ssh_userauth_kbdint_getname(m_ssh);
+        const char *instruction = ssh_userauth_kbdint_getinstruction(m_ssh);
+        int nprompts = ssh_userauth_kbdint_getnprompts(m_ssh);
+
+        Gtk::Dialog dialog(name, m_parent);
+        dialog.add_button("_Cancel", Gtk::RESPONSE_CANCEL);
+        dialog.add_button("_Ok", Gtk::RESPONSE_OK);
+        dialog.set_default_response(Gtk::RESPONSE_OK);
+
+        auto *grid = Gtk::manage(new Gtk::Grid);
+        grid->set_row_spacing(10);
+        grid->set_column_spacing(5);
+        grid->set_border_width(5);
+
+        Gtk::Label *instruction_label = Gtk::manage(new Gtk::Label(instruction));
+        instruction_label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_START);
+        grid->attach(*instruction_label, 0, 0, 2, 1);
+
+        for (int i=0; i<nprompts; i++) {
+            char echo;
+            const char *prompt = ssh_userauth_kbdint_getprompt(m_ssh, i, &echo);
+
+            Gtk::Label *prompt_label = Gtk::manage(new Gtk::Label(prompt));
+            prompt_label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_START);
+
+            Gtk::Entry *input_entry = Gtk::manage(new Gtk::Entry);
+            input_entry->set_activates_default(true);
+            input_entry->set_visibility(echo);
+
+            grid->attach(*prompt_label, 0, (i + 1), 1, 1);
+            grid->attach(*input_entry, 1, (i + 1), 1, 1);
+        }
+
+        if (nprompts > 0 || (instruction && instruction[0])) {
+            auto vbox = dialog.get_child();
+            dynamic_cast<Gtk::Container *>(vbox)->add(*grid);
+            dialog.show_all();
+            int response = dialog.run();
+            dialog.hide();
+
+            if (response != Gtk::RESPONSE_OK)
+                return false;
+        }
+
+        for (int i=0; i<nprompts; i++) {
+            Gtk::Entry* input_entry = dynamic_cast<Gtk::Entry*>(grid->get_child_at(1, i + 1));
+            if (input_entry) {
+                ssh_userauth_kbdint_setanswer(m_ssh, i, input_entry->get_text().c_str());
+            }
+        }
+
+        result = ssh_userauth_kbdint(m_ssh, nullptr, nullptr);
+    }
+
+    if (result != SSH_AUTH_SUCCESS) {
+        auto text = Glib::ustring::compose("Error connecting to %1: %2", m_hostname,
+                                           ssh_get_error(m_ssh));
+        Gtk::MessageDialog err_dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
+        (void)err_dialog.run();
+        return false;
+    }
 
     return true;
 }
