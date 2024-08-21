@@ -88,14 +88,15 @@ bool SshTunnel::connect(const Glib::ustring &server, const Glib::ustring &userna
         return true;
     auto auth_methods = ssh_userauth_list(m_ssh, nullptr);
     if (auth_methods == 0) {
-        // Server MAY reply to ssh_userauth_list, if it don't try anyway
-        auth_methods = (SSH_AUTH_METHOD_PUBLICKEY|
-                        SSH_AUTH_METHOD_PASSWORD|
-                        SSH_AUTH_METHOD_INTERACTIVE);
+        // Server MAY reply to ssh_userauth_list; if it doesn't, try anyway
+        auth_methods = (SSH_AUTH_METHOD_PUBLICKEY
+                        | SSH_AUTH_METHOD_PASSWORD
+                        | SSH_AUTH_METHOD_INTERACTIVE);
     }
 
     // TODO: Support SSH public keys with a passphrase
-    if ((auth_methods & SSH_AUTH_METHOD_PUBLICKEY) && (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS))
+    if ((auth_methods & SSH_AUTH_METHOD_PUBLICKEY)
+            && (ssh_userauth_publickey_auto(m_ssh, nullptr, "") == SSH_AUTH_SUCCESS))
         return true;
 
     if ((auth_methods & SSH_AUTH_METHOD_PASSWORD) && prompt_password())
@@ -276,8 +277,8 @@ bool SshTunnel::verify_host()
                 return false;
 
             if (ssh_session_update_known_hosts(m_ssh) < 0) {
-                auto text = Glib::ustring::compose("Error writing SSH host key: %1",
-                                                   ssh_get_error(m_ssh));
+                text = Glib::ustring::compose("Error writing SSH host key: %1",
+                                              ssh_get_error(m_ssh));
                 Gtk::MessageDialog dialog(m_parent, text, false, Gtk::MESSAGE_ERROR);
                 (void)dialog.run();
                 return false;
@@ -403,7 +404,7 @@ bool SshTunnel::interactive()
         instruction_label->set_alignment(Gtk::ALIGN_START, Gtk::ALIGN_START);
         grid->attach(*instruction_label, 0, 0, 2, 1);
 
-        for (int i=0; i<nprompts; i++) {
+        for (int i = 0; i < nprompts; ++i) {
             char echo;
             const char *prompt = ssh_userauth_kbdint_getprompt(m_ssh, i, &echo);
 
@@ -412,7 +413,7 @@ bool SshTunnel::interactive()
 
             Gtk::Entry *input_entry = Gtk::manage(new Gtk::Entry);
             input_entry->set_activates_default(true);
-            input_entry->set_visibility(echo);
+            input_entry->set_visibility((bool)echo);
 
             grid->attach(*prompt_label, 0, (i + 1), 1, 1);
             grid->attach(*input_entry, 1, (i + 1), 1, 1);
@@ -429,8 +430,8 @@ bool SshTunnel::interactive()
                 return false;
         }
 
-        for (int i=0; i<nprompts; i++) {
-            Gtk::Entry* input_entry = dynamic_cast<Gtk::Entry*>(grid->get_child_at(1, i + 1));
+        for (int i = 0; i < nprompts; ++i) {
+            auto input_entry = dynamic_cast<Gtk::Entry*>(grid->get_child_at(1, i + 1));
             if (input_entry) {
                 ssh_userauth_kbdint_setanswer(m_ssh, i, input_entry->get_text().c_str());
             }
@@ -486,7 +487,7 @@ void SshTunnel::tunnel_server(int ssh_fd)
     std::vector<ssh_channel> r_channels, w_channels;
     std::vector<ForwardClient> clients;
     fd_set rfds;
-    struct timeval timeout;
+    struct timeval timeout{};
     int server_fd = m_forward_socket->get_fd();
     char buffer[FORWARD_BUFFER_SIZE];
 

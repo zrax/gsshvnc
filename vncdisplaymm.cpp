@@ -1145,7 +1145,7 @@ void Vnc::DisplayWindow::vnc_credential(const std::vector<VncDisplayCredential> 
         dialog->hide();
 
         if (response == Gtk::RESPONSE_OK) {
-            int row = 0;
+            row = 0;
             for (size_t i = 0; i < credList.size(); ++i) {
                 switch (credList[i]) {
                 case VNC_DISPLAY_CREDENTIAL_USERNAME:
