@@ -19,10 +19,8 @@
 #include "credstorage.h"
 
 #include <glibmm/exceptionhandler.h>
-#include <glibmm/main.h>
 #include <glibmm/convert.h>
 #include <giomm/socketaddress.h>
-#include <gtkmm/main.h>
 #include <gtkmm/box.h>
 #include <gtkmm/grid.h>
 #include <gtkmm/scrolledwindow.h>
@@ -192,7 +190,7 @@ Vnc::DisplayWindow::DisplayWindow()
     });
     screenshot->signal_activate().connect(sigc::mem_fun(this, &DisplayWindow::vnc_screenshot));
 
-    appquit->signal_activate().connect([]() { Gtk::Main::quit(); });
+    appquit->signal_activate().connect([this]() { get_application()->quit(); });
 
     m_hide_menubar->signal_activate().connect([this]() {
         toggle_menubar();
@@ -918,7 +916,7 @@ void Vnc::DisplayWindow::init_vnc()
         auto text = Glib::ustring::compose("VNC Authentication failed: %1", message);
         Gtk::MessageDialog dialog(*this, text, false, Gtk::MESSAGE_ERROR);
         (void)dialog.run();
-        Gtk::Main::quit();
+        get_application()->quit();
     });
 
     signal_vnc_desktop_resize().connect([this](gint width, gint height) {
@@ -968,12 +966,12 @@ void Vnc::DisplayWindow::handle_disconnect(const Glib::ustring &connected_msg,
         if (result == Gtk::RESPONSE_YES)
             m_signal_reconnect.emit();
         else
-            Gtk::Main::quit();
+            get_application()->quit();
     } else {
         Gtk::MessageDialog dialog(*this, disconnected_msg, false,
                                   Gtk::MESSAGE_ERROR);
         (void)dialog.run();
-        Gtk::Main::quit();
+        get_application()->quit();
     }
 }
 

@@ -20,7 +20,7 @@
 /* TODO:  Use gmmproc to build a standard glibmm wrapper for VncDisplay,
  * instead of these "fake" wrappers */
 
-#include <gtkmm/window.h>
+#include <gtkmm/applicationwindow.h>
 #include <vncdisplay.h>
 
 #ifdef GTK_VNC_HAVE_VNCVERSION
@@ -52,7 +52,7 @@ class RadioMenuItem;
 namespace Vnc
 {
 
-class DisplayWindow : public Gtk::Window
+class DisplayWindow : public Gtk::ApplicationWindow
 {
 public:
     DisplayWindow();

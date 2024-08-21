@@ -17,12 +17,16 @@
 #include "vncdisplaymm.h"
 #include "vncconnectdialog.h"
 
-#include <glibmm/miscutils.h>
-#include <gtkmm/main.h>
+#include <glibmm/optioncontext.h>
+#include <gtkmm/application.h>
 #include <gtkmm/messagedialog.h>
 #include <libssh/callbacks.h>
-#include <fcntl.h>
 #include <iostream>
+
+#ifdef _WIN32
+#include <glibmm/miscutils.h>
+#include <cstdio>
+#endif
 
 static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
 {
@@ -53,6 +57,77 @@ static bool show_connect_dialog(Vnc::DisplayWindow &vnc, SshTunnel &ssh)
     return false;
 }
 
+class GsshvncApp : public Gtk::Application
+{
+public:
+    GsshvncApp()
+        : Gtk::Application("net.zrax.gsshvnc",
+                           Gio::APPLICATION_HANDLES_COMMAND_LINE | Gio::APPLICATION_NON_UNIQUE)
+    { }
+
+    ~GsshvncApp() override
+    {
+        if (m_ssh)
+            m_ssh->disconnect();
+        if (m_vnc)
+            remove_window(*m_vnc);
+    }
+
+protected:
+    int on_command_line(const Glib::RefPtr<Gio::ApplicationCommandLine> &command_line) override
+    {
+        const auto name = Glib::ustring::compose("- Simple SSH/VNC Client on Gtk-VNC %1",
+                                                 vnc_util_get_version_string());
+        static const char help_msg[] = "Run 'gsshvnc --help' to see a full list of available command line options";
+
+        Glib::OptionContext context(name);
+        context.add_group(Vnc::DisplayWindow::option_group());
+        Glib::OptionGroup gtk_group(gtk_get_option_group(true));
+        context.add_group(gtk_group);
+        context.set_help_enabled(true);
+
+        int argc = 0;
+        char **argv = command_line->get_arguments(argc);
+        try {
+            if (!context.parse(argc, argv))
+                return 1;
+        } catch (Glib::OptionError &err) {
+            std::cerr << err.what() << "\n" << help_msg << std::endl;
+            return 1;
+        }
+        activate();
+        return 0;
+    }
+
+    void on_activate() override
+    {
+        m_vnc = std::make_unique<Vnc::DisplayWindow>();
+        m_ssh = std::make_unique<SshTunnel>(*m_vnc);
+        add_window(*m_vnc);
+
+        if (!show_connect_dialog(*m_vnc, *m_ssh)) {
+            quit();
+            return;
+        }
+
+        m_vnc->signal_delete_event().connect([this](GdkEventAny *) -> bool {
+            quit();
+            return false;
+        });
+        m_vnc->signal_connection_lost().connect([this]() {
+            m_ssh->disconnect();
+        });
+        m_vnc->signal_want_reconnect().connect([this]() {
+            if (!show_connect_dialog(*m_vnc, *m_ssh))
+                quit();
+        });
+    }
+
+private:
+    std::unique_ptr<Vnc::DisplayWindow> m_vnc;
+    std::unique_ptr<SshTunnel> m_ssh;
+};
+
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
@@ -69,44 +144,8 @@ int main(int argc, char *argv[])
     ssh_threads_set_callbacks(ssh_threads_get_pthread());
     ssh_init();
 
-    auto name = Glib::ustring::compose("- Simple SSH/VNC Client on Gtk-VNC %1",
-                                       vnc_util_get_version_string());
-    static const char help_msg[] = "Run 'gsshvnc --help' to see a full list of available command line options";
+    int rc = GsshvncApp().run(argc, argv);
 
-    /* Setup command line options */
-    Glib::OptionContext context(name);
-    context.add_group(Vnc::DisplayWindow::option_group());
-
-    std::unique_ptr<Gtk::Main> appMain;
-    try {
-        appMain = std::make_unique<Gtk::Main>(argc, argv, context);
-    } catch (Glib::OptionError &err) {
-        std::cerr << err.what() << "\n" << help_msg << std::endl;
-        return 1;
-    }
-
-    Vnc::DisplayWindow vnc;
-    SshTunnel ssh(vnc);
-
-    if (!show_connect_dialog(vnc, ssh))
-        return 0;
-
-    vnc.signal_delete_event().connect([](GdkEventAny *) -> bool {
-        Gtk::Main::quit();
-        return false;
-    });
-    vnc.signal_connection_lost().connect([&ssh]() {
-        ssh.disconnect();
-    });
-    vnc.signal_want_reconnect().connect([&vnc, &ssh]() {
-        if (!show_connect_dialog(vnc, ssh))
-            Gtk::Main::quit();
-    });
-
-    Gtk::Main::run();
-
-    ssh.disconnect();
     ssh_finalize();
-
-    return 0;
+    return rc;
 }
