@@ -46,6 +46,7 @@ AppSettings::AppSettings()
     read_setting(config_file, "Main", "AllowResize", "false");
     read_setting(config_file, "Main", "SaveSSHPassword", "false");
     read_setting(config_file, "Main", "SaveVNCCredentials", "false");
+    read_setting(config_file, "Main", "WindowSize");
 }
 
 AppSettings::~AppSettings()
@@ -202,6 +203,25 @@ bool AppSettings::get_save_vnc_credentials() const
 void AppSettings::set_save_vnc_credentials(bool save)
 {
     set_bool("Main/SaveVNCCredentials", save);
+}
+
+std::tuple<int, int> AppSettings::get_window_size() const
+{
+    auto pos_str = m_values.at("Main/WindowSize");
+    auto position = std::make_tuple(-1, -1);
+
+    size_t comma = pos_str.find(',');
+    if (comma != Glib::ustring::npos) {
+        std::get<0>(position) = std::strtol(pos_str.c_str(), nullptr, 0);
+        std::get<1>(position) = std::strtol(pos_str.c_str() + comma + 1, nullptr, 0);
+    }
+    return position;
+}
+
+void AppSettings::set_window_size(int w, int h)
+{
+    m_values["Main/WindowSize"] = Glib::ustring::compose("%1,%2", w, h);
+    m_modified_keys.insert("Main/WindowSize");
 }
 
 void AppSettings::read_setting(Glib::KeyFile &conf_file, const Glib::ustring &group_name,

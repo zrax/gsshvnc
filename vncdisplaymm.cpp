@@ -168,8 +168,14 @@ Vnc::DisplayWindow::DisplayWindow()
     layout->pack_start(*m_viewport, true, true);
     add(*layout);
 
-    // Minimal size in case a fixed size is not later requested
-    set_size_request(600, 400);
+    AppSettings settings;
+    auto saved_size = settings.get_window_size();
+    if (saved_size != std::make_tuple(-1, -1)) {
+        set_size_request(std::get<0>(saved_size), std::get<1>(saved_size));
+    } else {
+        // Minimal size in case a fixed size is not later requested
+        set_size_request(600, 400);
+    }
 
     m_capture_keyboard->signal_activate().connect([this]() {
         bool enable = m_capture_keyboard->get_active();
@@ -293,6 +299,14 @@ Vnc::DisplayWindow::DisplayWindow()
     signal_show().connect([this]() {
         if (m_hide_menubar->get_active())
             m_menubar->hide();
+    });
+
+    signal_hide().connect([this]() {
+        int w, h;
+        get_size(w, h);
+
+        AppSettings settings;
+        settings.set_window_size(w, h);
     });
 }
 

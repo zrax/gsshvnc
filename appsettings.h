@@ -17,6 +17,7 @@
 #ifndef _APPSETTINGS_H
 #define _APPSETTINGS_H
 
+#include <tuple>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -75,6 +76,9 @@ public:
 
     bool get_save_vnc_credentials() const;
     void set_save_vnc_credentials(bool save);
+
+    std::tuple<int, int> get_window_size() const;
+    void set_window_size(int w, int h);
 
 private:
     std::unordered_map<std::string, Glib::ustring> m_values;
