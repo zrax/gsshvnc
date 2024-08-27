@@ -1,0 +1,5 @@
+/debian/.debhelper
+/debian/debhelper-build-stamp
+/debian/files
+/debian/gsshvnc
+/debian/gsshvnc.substvars
