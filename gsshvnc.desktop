@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=gsshvnc
+Comment=Simple VNC client with built-in SSH tunneling
+Exec=gsshvnc
+Type=Application
+StartupNotify=true
+Icon=gsshvnc
+Terminal=false
+Categories=GTK;Network;RemoteAccess;

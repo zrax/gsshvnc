@@ -33,7 +33,7 @@ gtkmm_dep = dependency('gtkmm-3.0')
 gsshvnc_deps = [gvnc_dep, gtk_vnc_dep, gtkmm_dep]
 
 gsshvnc_defs = []
-if host_machine.system() != 'windows'
+if target_machine.system() != 'windows'
     secret_dep = dependency('libsecret-1')
     gsshvnc_deps += [secret_dep]
     gsshvnc_defs += ['-DUSE_LIBSECRET']
@@ -59,7 +59,7 @@ gsshvnc_deps += [libssh_dep, libssh_threads_dep]
 thread_dep = dependency('threads')
 gsshvnc_deps += [thread_dep]
 
-if host_machine.system() == 'windows'
+if target_machine.system() == 'windows'
     gsshvnc_deps += cpp_compiler.find_library('ws2_32')
 endif
 
@@ -73,7 +73,7 @@ gsshvnc_src = [
     'vncgrabsequencemm.cpp',
 ]
 
-if host_machine.system() == 'windows'
+if target_machine.system() == 'windows'
     windows = import('windows')
     gsshvnc_src += windows.compile_resources('win32/gsshvnc.rc')
 endif
@@ -84,3 +84,8 @@ executable('gsshvnc', gsshvnc_src,
            gui_app: true,
            install: true
 )
+
+if target_machine.system() == 'linux'
+    install_data('gsshvnc.desktop', install_dir: 'share/applications')
+    install_data('gsshvnc.png', install_dir: 'share/pixmaps')
+endif
