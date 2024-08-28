@@ -71,6 +71,7 @@ deploy_packages=[
     'shared-mime-info',
     'xz',
     'zlib',
+    'zstd',
 ]
 
 # Files and directories to remove after taking a snapshot of the above packages
