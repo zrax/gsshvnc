@@ -1,5 +1,9 @@
 gsshvnc (0.96) unstable; urgency=medium
 
-  * Create official packaging for gsshvnc.
+  * Add support for SSH keyboard-interactive authentication
+  * Port to GtkApplication
+  * Remember previous VNC window size
+  * Add .desktop file for better DE integration
+  * Add official packaging for Debian-based distributions
 
  -- Michael Hansen <zrax0111@gmail.com>  Thu, 22 Aug 2024 11:37:53 -0700
