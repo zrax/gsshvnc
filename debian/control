@@ -3,7 +3,7 @@ Maintainer: Michael Hansen <zrax0111@gmail.com>
 Section: x11
 Priority: optional
 Standards-Version: 4.6.2
-Build-Depends: debhelper-compat (= 12), meson (>= 0.37), libgvnc-1.0-dev,
+Build-Depends: debhelper-compat (= 13), meson (>= 0.37), libgvnc-1.0-dev,
                libgtk-vnc-2.0-dev, libgtkmm-3.0-dev, libsecret-1-dev,
                libssh-dev
 
