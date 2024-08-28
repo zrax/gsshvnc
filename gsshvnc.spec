@@ -1,7 +1,7 @@
 Name:		gsshvnc
 Version:	0.96
 Release:	1%{?dist}
-Summary:	A simple VNC client with built-in SSH tunneling
+Summary:	Simple VNC client with built-in SSH tunneling
 
 Group:		Applications/System
 License:	GPLv2+
@@ -45,8 +45,18 @@ VNC server.
 
 %changelog
 * Wed Aug 28 2024 Michael Hansen <zrax0111@gmail.com> - 0.96
-- Add support for SSH keyboard-interactive authentication
-- Port to GtkApplication
-- Remember previous VNC window size
-- Add .desktop file for better DE integration
-- Add native packaging for RPM-based distributions
+- Add support for SSH keyboard-interactive authentication.
+- Port to GtkApplication.
+- Remember previous VNC window size.
+- Add .desktop file for better DE integration.
+
+* Mon Aug 09 2021 Michael Hansen <zrax0111@gmail.com> - 0.95
+- Add support for keeping aspect ratio when scaling the display.
+- Add a resize mode which will resize the remote display when possible.
+- Fix for gsshvnc disappearing from the task bar while still running.
+- Don't give up after 3 failed connection attempts.
+
+* Tue Dec 04 2018 Michael Hansen <zrax0111@gmail.com> - 0.94
+- Add support for securely saving passwords.
+- Show SSH Tunnel host in the main VNC window title.
+- Fix the formatting on some dialog boxes.

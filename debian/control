@@ -10,7 +10,7 @@ Build-Depends: debhelper-compat (= 12), meson (>= 0.37), libgvnc-1.0-dev,
 Package: gsshvnc
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: A simple VNC client with built-in SSH tunneling.
+Description: Simple VNC client with built-in SSH tunneling.
   Gsshvnc (pronounced "Gosh VNC") is a simple GTK3-based VNC client that can
   (optionally) automatically establish and use an SSH tunnel to connect to a
   VNC server.

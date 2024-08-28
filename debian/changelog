@@ -1,9 +1,25 @@
 gsshvnc (0.96) unstable; urgency=medium
 
-  * Add support for SSH keyboard-interactive authentication
-  * Port to GtkApplication
-  * Remember previous VNC window size
-  * Add .desktop file for better DE integration
-  * Add official packaging for Debian-based distributions
+  * Add support for SSH keyboard-interactive authentication.
+  * Port to GtkApplication.
+  * Remember previous VNC window size.
+  * Add .desktop file for better DE integration.
 
  -- Michael Hansen <zrax0111@gmail.com>  Thu, 22 Aug 2024 11:37:53 -0700
+
+gsshvnc (0.95-1) unstable; urgency=medium
+
+  * Add support for keeping aspect ratio when scaling the display.
+  * Add a resize mode which will resize the remote display when possible.
+  * Fix for gsshvnc disappearing from the task bar while still running.
+  * Don't give up after 3 failed connection attempts.
+
+ -- Michael Hansen <zrax0111@gmail.com>  Mon, 09 Aug 2021 11:12:15 -0800
+
+gsshvnc (0.94-1) unstable; urgency=medium
+
+  * Add support for securely saving passwords.
+  * Show SSH Tunnel host in the main VNC window title.
+  * Fix the formatting on some dialog boxes.
+
+ -- Michael Hansen <zrax0111@gmail.com>  Mon, 03 Dec 2018 11:19:40 -0800
