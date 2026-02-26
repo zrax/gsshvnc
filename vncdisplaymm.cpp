@@ -171,10 +171,10 @@ Vnc::DisplayWindow::DisplayWindow()
     AppSettings settings;
     auto saved_size = settings.get_window_size();
     if (saved_size != std::make_tuple(-1, -1)) {
-        set_size_request(std::get<0>(saved_size), std::get<1>(saved_size));
+        set_default_size(std::get<0>(saved_size), std::get<1>(saved_size));
     } else {
         // Minimal size in case a fixed size is not later requested
-        set_size_request(600, 400);
+        set_default_size(600, 400);
     }
 
     m_capture_keyboard->signal_activate().connect([this]() {
